@@ -79,4 +79,3 @@ test('PicoRepo: linear multi-author fast-forward', async t => {
   } catch (err) { t.error(err) }
   t.end()
 })
-
