@@ -1,0 +1,31 @@
+{
+  "name": "picorepo",
+  "version": "0.1.0",
+  "description": "Persistent efficient binary block storage for picofeeds",
+  "main": "index.js",
+  "scripts": {
+    "lint": "standard",
+    "test": "tape test.js",
+    "debug": "node inspect $(npm bin)/tape test.js",
+    "prepublishOnly": "standard && npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/telamon/picorepo"
+  },
+  "author": "Tony Ivanov",
+  "license": "AGPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/telamon/picorepo"
+  },
+  "homepage": "https://github.com/telamon/picorepo",
+  "dependencies": {
+    "picofeed": "^3.3.2"
+  },
+  "devDependencies": {
+    "levelup": "^5.0.1",
+    "memdown": "^6.0.0",
+    "standard": "^16.0.3",
+    "tape": "^5.3.1"
+  }
+}
