@@ -8,7 +8,8 @@ const Feed = require('picofeed')
 const HEAD = 0
 const BLOCK = 1
 const TAIL = 2
-const REG = 3 // misc
+const LATEST = 3
+const REG = 4 // misc
 
 function mkKey (type, key) {
   if (!Buffer.isBuffer(key)) throw new Error('Expected key to be a Buffer')
@@ -56,6 +57,21 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     return buffer
   }
 
+  async _setLatestPtr (name, ptr) {
+    const key = mkKey(LATEST, name)
+    await this._db.put(key, ptr)
+    return ptr
+  }
+
+  async _getLatestPtr (name) {
+    const key = mkKey(LATEST, name)
+    const buffer = await this._db.get(key)
+      .catch(err => {
+        if (!err.notFound) throw err
+      })
+    return buffer
+  }
+
   async writeBlock (block) {
     const key = mkKey(BLOCK, block.sig)
     // TODO: this method used to return false when block exists
@@ -95,9 +111,27 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     return !!(await this.readBlock(id))
   }
 
+  async _traceOwnerOf (sig) {
+    // Tricky... trading off some extra index memory could possibly
+    // reduce the need to traverse the chain backwards
+    // I don't know.
+    let n = 0
+    for await (const block of this._chainLoad(sig)) {
+      if (block.isGenesis) return block.key
+      n++
+    }
+    if (n) throw new Error('Orphaned Chain')
+    // else chain not found
+  }
+
   async merge (feed, strategy) { // or merge() ?
     if (!Feed.isFeed(feed)) feed = Feed.from(feed)
     let blocksWritten = 0
+    let owner = null
+    const first = feed.first
+    if (!first) return 0
+    else if (first.isGenesis) owner = first.key
+    else owner = await this._traceOwnerOf(first.parentSig)
 
     for (const block of feed.blocks()) {
       const author = block.key
@@ -108,7 +142,8 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
 
       const bumpHead = async () => {
         await this.writeBlock(block)
-        await this._setHeadPtr(author, block.sig)
+        await this._setHeadPtr(owner, block.sig)
+        await this._setLatestPtr(author, block.sig)
         blocksWritten++
       }
 
@@ -167,15 +202,26 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     return false
   }
 
+  /**
+   * Loads feed from pubkey's personal feed
+   */
   async loadHead (key, stopCallback = undefined) {
-    let limit = 0
-    if (Number.isInteger(stopCallback) && stopCallback > 0) limit = stopCallback
     const head = await this._getHeadPtr(key)
-    if (!head) return
-    return this.loadFeed(head, limit ? (_, after) => !--limit && after(true) : stopCallback)
+    if (head) return this.loadFeed(head, stopCallback)
+  }
+
+  /**
+   * Loads feed from pubkey's latest block and backwards
+   */
+  async loadLatest (key, stopCallback = undefined) {
+    const head = await this._getLatestPtr(key)
+    if (head) return this.loadFeed(head, stopCallback)
   }
 
   async loadFeed (ptr, stopCallback = undefined) {
+    let limit = 0
+    if (Number.isInteger(stopCallback) && stopCallback > 0) limit = stopCallback
+    if (limit) stopCallback = (_, after) => !--limit && after(true)
     const pending = []
     for await (const block of this._chainLoad(ptr)) {
       /* If needed async abort use this instead.
