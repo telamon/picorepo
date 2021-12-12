@@ -4,7 +4,7 @@
  *
  */
 const Feed = require('picofeed')
-
+const REPO_SYMBOL = Symbol.for('PicoRepo')
 const HEAD = 0
 const BLOCK = 1
 const TAIL = 2
@@ -20,7 +20,9 @@ function mkKey (type, key) {
 }
 
 class PicoRepo { //  PicoJar (a jar for crypto-pickles)
+  static isRepo (o) { return o && o[REPO_SYMBOL] }
   constructor (db, strategy = []) {
+    this[REPO_SYMBOL] = true
     this._db = db
     // A jar usually boasts a label describing it's contents
     // so that people know what to expect to get and at least
