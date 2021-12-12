@@ -98,6 +98,8 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
 
   async deleteBlock (id) {
     const key = mkKey(BLOCK, id)
+    // TODO: clean up indexes HEAD, LATEST, TAIL
+    // might need to rework this method into rollback(id, newHead)
     await this._db.del(key)
       .catch(err => {
         if (!err.notFound) throw err
@@ -148,7 +150,7 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
       }
 
       // fetch current head
-      const head = await this._getHeadPtr(author)
+      const head = await this._getHeadPtr(owner)
 
       // Allow creation of new heads
       if (!head) {
@@ -156,7 +158,7 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
         continue
       }
 
-      // Fast-forward when previous head points to parent of new block
+      // skip ahead when previous head points to parent of new block
       if (head.equals(block.parentSig)) {
         await bumpHead()
         continue
