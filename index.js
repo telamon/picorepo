@@ -134,6 +134,7 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     if (!first) return 0
     else if (first.isGenesis) owner = first.key
     else owner = await this._traceOwnerOf(first.parentSig)
+    if (!owner) throw new Error('CannotMerge: Unknown Chain')
 
     for (const block of feed.blocks()) {
       const author = block.key
@@ -261,9 +262,12 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
   }
 
   async * _chainLoad (next) {
+    let first = true
     while (true) {
-      const block = await this.readBlock(next) // TODO: maybe silently break loop on error?
-      if (!block) break // TODO: throw MissingParent error?
+      const block = await this.readBlock(next)
+      if (!block && first) break // chain not found, silent
+      first = false
+      if (!block) throw new Error('ParentNotFound') // broken chain, loud
       yield block
       if (block.isGenesis) break // We've hit a genesis block
       next = block.parentSig
