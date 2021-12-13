@@ -98,17 +98,6 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     if (buffer) return Feed.mapBlock(buffer, 32, buffer.slice(0, 32))
   }
 
-  async deleteBlock (id) {
-    const key = mkKey(BLOCK, id)
-    // TODO: clean up indexes HEAD, LATEST, TAIL
-    // might need to rework this method into rollback(id, newHead)
-    await this._db.del(key)
-      .catch(err => {
-        if (!err.notFound) throw err
-      })
-    return true
-  }
-
   // Internal because it performs a full block read, use with care.
   // (blocks are small in this application, don't care)
   async _hasBlock (id) {
@@ -276,9 +265,68 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     }
   }
 
+  async rollback (head, ptr) {
+    let stopHit = false
+    const evicted = await this.loadHead(head, (block, abort) => {
+      if (ptr && block.sig.equals(ptr)) {
+        stopHit = true
+        abort()
+      }
+    })
+    if (ptr && !stopHit) throw new Error('ReferenceNotFound')
+
+    const batch = []
+    const relocate = []
+    const latest = {}
+    for (let i = evicted.length - 1; i >= 0; i--) {
+      const block = evicted.get(i)
+      const key = block.key.toString('hex')
+      if (!latest[key]) latest[key] = await this._getLatestPtr(block.key)
+      // detect if latest-ptr needs to be relocated
+      if (latest[key].equals(block.sig)) {
+        relocate.push(block.key)
+      }
+      // Delete block op
+      batch.push({ type: 'del', key: mkKey(BLOCK, block.sig) })
+    }
+    /*
+     * Latest tags are not used atm. maybe let's just relocate them to
+     * their respective heads after rollback, it's not correct but
+     * better than nothing.
+     */
+    /*
+    const newTags = []
+    for await (const block of this._chainLoad(ptr)) {
+      if (!relocate.length) break
+      const idx = relocate.findIndex(k => k.equals(block.key))
+      if (~idx) {
+        newTags.push({
+          key: relocate[idx],
+          ptr: block.sig
+        })
+        relocate.splice(idx, 1)
+      }
+    } */
+
+    // Adjust new head
+    batch.push({ type: 'del', key: mkKey(HEAD, head) })
+    if (ptr) batch.push({ type: 'put', key: mkKey(HEAD, head), value: ptr })
+    else if (!evicted.first.isGenesis) {
+      batch.push({ type: 'put', key: mkKey(HEAD, head), value: evicted.first.parentSig })
+    }
+    // For now, purge all deleted 'latest'-tags
+    for (const key of relocate) {
+      batch.push({ type: 'del', key: mkKey(LATEST, key) })
+    }
+
+    await this._db.batch(batch)
+    return evicted
+  }
+
   // Expose some wrappers to avoid invoking internal API directly
   get headOf () { return this._getHeadPtr }
   get tailOf () { return this._getTailPtr }
+  get latestOf () { return this._getLatestPtr }
   get chainload () { return this._chainLoad }
 
   /* Signatures are keys are 32bytes in size and are duplicated

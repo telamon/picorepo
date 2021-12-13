@@ -25,10 +25,12 @@ test('PicoRepo: low-level block store', async t => {
     t.ok(f.last.buffer.equals(storedBlock.buffer))
     t.ok(f.last.key.equals(storedBlock.key))
 
+    /* use repo.rollback()
     const deleted = await repo.deleteBlock(blockId)
     t.ok(deleted)
     const notFound = await repo.readBlock(blockId)
     t.notOk(notFound)
+    */
   } catch (err) { t.error(err) }
   t.end()
 })
@@ -81,7 +83,7 @@ test('PicoRepo: linear multi-author fast-forward', async t => {
 })
 
 test('HeadRework; each head keeps track of own chain', async t => {
-  /* The Problem:
+  /* The Problem: (top down)
    * B0  A0~ C0  D0
    * B1~ A4* C1  D1
    * A1      A2~ A5*
@@ -146,4 +148,76 @@ test('HeadRework; each head keeps track of own chain', async t => {
   const lB = await repo.loadLatest(B.slice(32))
   t.equal(lA.last.sig.hexSlice(), fD.get(-2).sig.hexSlice(), 'A lastWrite successfully')
   t.equal(lB.last.sig.hexSlice(), fB.get(-2).sig.hexSlice(), 'B lastWrite successfully')
+})
+
+test('repo.rollback(head, ptr)', async t => {
+  /* The problem: (top down)
+   *   A0  B0~
+   *    |  B2 <-- current B / after rollback latest B
+   *   A1  <-- after rollback latest-A
+   *   B1~ <-- after rollback new A-head
+   * ! A2
+   * ! A3 <-- latest
+   * ! B3 <-- latest B /current A
+   *
+   * await repo.rollback(A, B1)
+   */
+  const repo = new Repo(DB(), async () => true)
+  const [A, B] = Array.from(new Array(2)).map(() => Feed.signPair().sk)
+  const fA = new Feed()
+  const fB = new Feed()
+  fA.append('A0', A)
+  fA.append('A1', A)
+  // const A1 = fA.last
+  await repo.merge(fA)
+  fB.append('B0', B)
+  await repo.merge(fB)
+  fA.append('B1', B)
+  const B1 = fA.last
+  fA.append('A2', A)
+  fA.append('A3', A)
+  const A3 = fA.last
+  await repo.merge(fA)
+  fB.append('B2', B)
+  const B2 = fB.last
+  await repo.merge(fB)
+  fA.append('B3', B)
+  const B3 = fA.last
+  await repo.merge(fA)
+
+  let currentA = await repo.headOf(A.slice(32))
+  let latestA = await repo.latestOf(A.slice(32))
+  let currentB = await repo.headOf(B.slice(32))
+  let latestB = await repo.latestOf(B.slice(32))
+  // console.log('Feed A')
+  // fA.inspect()
+  // console.log('Feed B')
+  // fB.inspect()
+
+  hexCmp(latestB, B3.sig, 'Latest B ptr equals B3')
+  hexCmp(currentB, B2.sig, 'Head B ptr equals B2')
+  hexCmp(latestA, A3.sig, 'Latest A ptr equals A3')
+  hexCmp(currentA, B3.sig, 'Head A ptr equals A3')
+
+  const evicted = await repo.rollback(A.slice(32), B1.sig)
+  t.equal(evicted.length, 3)
+  // hexCmp(evicted.first.sig, A2.sig)
+  // hexCmp(evicted.last.sig, B3.sig)
+
+  currentA = await repo.headOf(A.slice(32))
+  latestA = await repo.latestOf(A.slice(32))
+  currentB = await repo.headOf(B.slice(32))
+  latestB = await repo.latestOf(B.slice(32))
+
+  hexCmp(currentA, B1.sig, 'Head A ptr equals B1')
+  hexCmp(currentB, B2.sig, 'Head B ptr equals B2')
+
+  t.notOk(latestA, 'tag A deleted')
+  t.notOk(latestB, 'tag B deleted')
+  // TODO: latest-tags are deleted for now.
+  // hexCmp(latestB, B2.sig, 'Latest B ptr equals B2')
+  // hexCmp(latestA, A1.sig, 'Latest A ptr equals A1')
+  function hexCmp (a, b, desc) {
+    return t.equal(a?.hexSlice(0, 4), b?.hexSlice(0, 4), desc)
+  }
 })
