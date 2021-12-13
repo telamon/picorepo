@@ -282,8 +282,8 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
       const block = evicted.get(i)
       const key = block.key.toString('hex')
       if (!latest[key]) latest[key] = await this._getLatestPtr(block.key)
-      // detect if latest-ptr needs to be relocated
-      if (latest[key].equals(block.sig)) {
+      // detect if latest-ptr needs to be adjusted
+      if (latest[key]?.equals(block.sig)) {
         relocate.push(block.key)
       }
       // Delete block op
@@ -328,6 +328,7 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
   get tailOf () { return this._getTailPtr }
   get latestOf () { return this._getLatestPtr }
   get chainload () { return this._chainLoad }
+  get ownerOf () { return this._traceOwnerOf }
 
   /* Signatures are keys are 32bytes in size and are duplicated
    * into every block blob, an idea was to use a varint keyId to make each
