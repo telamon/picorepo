@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/telamon/picorepo",
   "dependencies": {
-    "picofeed": "^3.3.2"
+    "picofeed": "^3.3.3"
   },
   "devDependencies": {
     "levelup": "^5.1.1",
