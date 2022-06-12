@@ -242,13 +242,8 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
       if (abortAfter || abort) break
     }
 
-    // Merge all pending blocks in a forward fashion to avoid
-    // duplicate revalidations
-    const feed = new Feed()
-    for (const block of pending) {
-      const merged = feed.merge(block)
-      if (!merged) throw new Error('InternalError:CannotRestoreStoredBlock')
-    }
+    // Reconstruct feed from blocks
+    const feed = Feed.fromBlockArray(pending)
     if (feed.length) return feed
   }
 
@@ -289,6 +284,7 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
       // Delete block op
       batch.push({ type: 'del', key: mkKey(BLOCK, block.sig) })
     }
+
     /*
      * Latest tags are not used atm. maybe let's just relocate them to
      * their respective heads after rollback, it's not correct but
