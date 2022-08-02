@@ -291,3 +291,28 @@ test('Experimental: author can create multiple feeds', async t => {
 
   // await dump(repo, 'test.dot') // $ yarn test && xdot repo.dot
 })
+
+test('repo.resolveFeed(sig) returns entire feed', async t => {
+  const repo = new Repo(DB())
+  const { pk, sk } = Feed.signPair()
+  const feedA = new Feed()
+  feedA.append('0', sk)
+  feedA.append('1', sk)
+  feedA.append('2', sk)
+  feedA.append('3', sk)
+  feedA.append('4', sk)
+  feedA.append('5', sk)
+  feedA.append('6', sk)
+  feedA.append('7', sk)
+  await repo.merge(feedA)
+  let f = await repo.resolveFeed(feedA.get(2).sig)
+  t.equal(f.last.body.toString(), '7')
+
+  // await repo.rollback(f.last.sig, f.get(-2).sig)
+  await repo.rollback(pk, f.get(-3).sig)
+  f = await repo.resolveFeed(feedA.get(2).sig)
+  t.equal(f.last.body.toString(), '5')
+  await require('./dot').dump(repo, 'test.dot')
+  await repo.rollback(pk)
+  t.equal((await repo.listFeeds()).length, 0, 'Empty repo')
+})

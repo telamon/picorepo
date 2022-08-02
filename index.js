@@ -14,7 +14,8 @@ const LATEST = 3 // Last write of Author PK
 const REG = 4 // misc application namespace/userland
 // Attempt to keep track of individual feeds in store
 // using the signature of their genesis block as "chainID"
-const CHAIN = 5 // Feed end tag by GenesisBlock Signature
+const CHAIN_TAIL = 5 // Feed start tag by GenesisBlock Signature
+const CHAIN_HEAD = 6 // Feed end tag inverse index of CHAIN_TAIL
 
 function mkKey (type, key) {
   if (!Buffer.isBuffer(key)) throw new Error('Expected key to be a Buffer')
@@ -51,32 +52,14 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     return ptr
   }
 
-  async _getHeadPtr (name) {
-    const key = mkKey(HEAD, name)
-    const buffer = await this._db.get(key)
-      .catch(err => {
-        if (!err.notFound) throw err
-      })
-    return buffer
-  }
-
-  async _getTailPtr (name) {
-    const key = mkKey(TAIL, name)
-    const buffer = await this._db.get(key)
-      .catch(err => {
-        if (!err.notFound) throw err
-      })
-    return buffer
-  }
-
   async _setLatestPtr (name, ptr) {
     const key = mkKey(LATEST, name)
     await this._db.put(key, ptr)
     return ptr
   }
 
-  async _getLatestPtr (name) {
-    const key = mkKey(LATEST, name)
+  async _getTag (type, name) {
+    const key = mkKey(type, name)
     const buffer = await this._db.get(key)
       .catch(err => {
         if (!err.notFound) throw err
@@ -84,14 +67,13 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     return buffer
   }
 
-  async _getChainPtr (name) {
-    const key = mkKey(CHAIN, name)
-    const buffer = await this._db.get(key)
-      .catch(err => {
-        if (!err.notFound) throw err
-      })
-    return buffer
-  }
+  async _getHeadPtr (name) { return this._getTag(HEAD, name) }
+
+  async _getTailPtr (name) { return this._getTag(TAIL, name) }
+
+  async _getLatestPtr (name) { return this._getTag(LATEST, name) }
+
+  async _getChainPtr (name) { return this._getTag(CHAIN_TAIL, name) }
 
   async writeBlock (block) {
     const key = mkKey(BLOCK, block.sig)
@@ -105,12 +87,14 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
 
     if (block.isGenesis) {
       batch.push({ type: 'put', key: mkKey(TAIL, block.key), value: block.sig })
-      batch.push({ type: 'put', key: mkKey(CHAIN, block.sig), value: block.sig })
+      batch.push({ type: 'put', key: mkKey(CHAIN_TAIL, block.sig), value: block.sig })
+      batch.push({ type: 'put', key: mkKey(CHAIN_HEAD, block.sig), value: block.sig })
     } else {
       // Move ChainID tag
-      const prevKey = mkKey(CHAIN, block.parentSig)
+      const prevKey = mkKey(CHAIN_TAIL, block.parentSig)
       const chainId = await this._db.get(prevKey)
-      batch.push({ type: 'put', key: mkKey(CHAIN, block.sig), value: chainId })
+      batch.push({ type: 'put', key: mkKey(CHAIN_TAIL, block.sig), value: chainId })
+      batch.push({ type: 'put', key: mkKey(CHAIN_HEAD, chainId), value: block.sig })
       batch.push({ type: 'del', key: prevKey })
     }
     await this._db.batch(batch)
@@ -144,6 +128,20 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     }
     if (n) throw new Error('Orphaned Chain')
     // else chain not found
+  }
+
+  /**
+   * Returns entire feed given a blockId of the set.
+   */
+  async resolveFeed (sig, stopCallback = undefined) {
+    let tip = await this._getTag(CHAIN_TAIL, sig)
+    if (tip) return this.loadFeed(tip, stopCallback)
+    for await (const block of this._chainLoad(sig)) {
+      if (!block.isGenesis) continue
+      tip = await this._getTag(CHAIN_HEAD, block.sig)
+    }
+    if (!tip) throw new Error('Unknown feed')
+    return this.loadFeed(tip, stopCallback)
   }
 
   async merge (feed, strategy) { // or merge() ?
@@ -347,6 +345,11 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
 
     const isFeedPurged = evicted.first.isGenesis
 
+    // Clean up tail tag on full eviction
+    if (isFeedPurged) {
+      batch.push({ type: 'del', key: mkKey(TAIL, head) })
+    }
+
     // -- Adjust new head
     batch.push({ type: 'del', key: mkKey(HEAD, head) })
     if (ptr) { // Partial Rollback, part of feed still exists
@@ -356,15 +359,22 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
       batch.push({ type: 'put', key: mkKey(HEAD, head), value: evicted.first.parentSig })
     }
 
-    // Relocated chain-identifier
-    // tag should be indexed under ptr of head
-    batch.push({ type: 'del', key: mkKey(CHAIN, evicted.last.sig) })
-    const chainId = await this._getChainPtr(evicted.last.sig)
+    // Relocated chain-identifiers
+    batch.push({ type: 'del', key: mkKey(CHAIN_TAIL, evicted.last.sig) })
+    const chainId = await this._getTag(CHAIN_TAIL, evicted.last.sig)
+
+    if (chainId) batch.push({ type: 'del', key: mkKey(CHAIN_HEAD, chainId) })
+
     if (chainId && !isFeedPurged) {
       batch.push({
         type: 'put',
-        key: mkKey(CHAIN, evicted.first.parentSig),
+        key: mkKey(CHAIN_TAIL, evicted.first.parentSig),
         value: chainId
+      })
+      batch.push({
+        type: 'put',
+        key: mkKey(CHAIN_HEAD, chainId),
+        value: evicted.first.parentSig
       })
     }
 
@@ -453,8 +463,15 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
    */
   async listFeeds () {
     return this._listRange({
-      gt: mkKey(CHAIN, Buffer.alloc(32).fill(0)),
-      lt: mkKey(CHAIN, Buffer.alloc(32).fill(0xff))
+      gt: mkKey(CHAIN_TAIL, Buffer.alloc(32).fill(0)),
+      lt: mkKey(CHAIN_TAIL, Buffer.alloc(32).fill(0xff))
+    })
+  }
+
+  async listFeedHeads () {
+    return this._listRange({
+      gt: mkKey(CHAIN_HEAD, Buffer.alloc(32).fill(0)),
+      lt: mkKey(CHAIN_HEAD, Buffer.alloc(32).fill(0xff))
     })
   }
 
