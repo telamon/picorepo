@@ -26,6 +26,9 @@ function mkKey (type, key) {
 
 class PicoRepo { //  PicoJar (a jar for crypto-pickles)
   static isRepo (o) { return o && o[REPO_SYMBOL] }
+
+  allowDetached = false
+
   constructor (db, strategy = []) {
     this[REPO_SYMBOL] = true
     this._db = db
@@ -143,11 +146,11 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
 
   async merge (feed, strategy) { // or merge() ?
     if (!Feed.isFeed(feed)) feed = Feed.from(feed)
+    if (!feed.length) return 0
     let blocksWritten = 0
     let owner = null
     const first = feed.first
-    if (!first) return 0
-    else if (first.isGenesis) owner = first.key
+    if (first.isGenesis) owner = first.key
     else owner = await this._traceOwnerOf(first.parentSig)
     if (!owner) throw new Error('CannotMerge: Unknown Chain')
 
@@ -176,6 +179,12 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
 
       // skip ahead when previous head points to parent of new block
       if (head.equals(block.parentSig)) {
+        await bumpHead()
+        continue
+      }
+
+      // Allow everything to become fckd
+      if (this.allowDetached && block.isGenesis) {
         await bumpHead()
         continue
       }

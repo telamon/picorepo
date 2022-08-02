@@ -4,7 +4,7 @@ const Feed = require('picofeed')
 const levelup = require('levelup')
 const memdown = require('memdown')
 const Repo = require('.')
-// const { dump } = require('./dot')
+const { dump } = require('./dot')
 const DB = () => levelup(memdown())
 
 test('PicoRepo: low-level block store', async t => {
@@ -259,4 +259,26 @@ test('Each head has a tag referencing the genesis', async t => {
   function hexCmp (a, b, desc) {
     return t.equal(a?.hexSlice(0, 4), b?.hexSlice(0, 4), desc)
   }
+})
+
+test('Experimental: author can create multiple feeds', async t => {
+  const repo = new Repo(DB(),)
+  const { pk, sk } = Feed.signPair()
+  const feedA = new Feed()
+  feedA.append('A0: Hello', sk)
+  feedA.append('A1: World', sk)
+  await repo.merge(feedA)
+
+  const feedB = new Feed()
+  feedB.append('B0: Cyborg', sk)
+  feedB.append('B1: Cool', sk)
+
+  let written = await repo.merge(feedB)
+  t.equal(written, 2, 'second feed persisted')
+
+  feedA.append('A2: of', sk)
+  feedA.append('A3: Hackers', sk)
+  written = await repo.merge(feedA)
+  // t.equal(written, 2, 'second feed persisted')
+  await dump(repo, 'test.dot') // $ yarn test && xdot repo.dot
 })
