@@ -1,119 +1,122 @@
 
     digraph G {
-      graph [fontname="fixed",overlap="false",center="1",ratio="compress",label="PicoRepo",rankdir=BT];
+      graph [fontname="fixed",overlap="false",center="1",ratio="compress",label="[PicoRepo] Authors: 4 Feeds: 4, Blocks: 17, Bytes: 2283 (39)",rankdir=BT];
       node [style=filled,fillcolor=white,shape="circle"];
-      // Nodes
-  "H0e354806"[fillcolor=lightblue3,label="Head 
-0e354806"];
-"H26246347"[fillcolor=lightblue3,label="Head 
-26246347"];
-"H7887ec6d"[fillcolor=lightblue3,label="Head 
-7887ec6d"];
-"Hb4171b6f"[fillcolor=lightblue3,label="Head 
-b4171b6f"];
-"T58ca7206"[fillcolor=sienna,label="Tail
- 0e354806",shape=box];
-"T13b8a136"[fillcolor=sienna,label="Tail
- 26246347",shape=box];
-"T18299c60"[fillcolor=sienna,label="Tail
- 7887ec6d",shape=box];
-"Tf7b26f25"[fillcolor=sienna,label="Tail
- b4171b6f",shape=box];
-"Lbe026a13"[fillcolor=seagreen,label="Latest
- 0e354806",shape=box];
-"Lcb951e6b"[fillcolor=seagreen,label="Latest
- 26246347",shape=box];
-"L74eb66ca"[fillcolor=seagreen,label="Latest
- 7887ec6d",shape=box];
-"Ldecd7b08"[fillcolor=seagreen,label="Latest
- b4171b6f",shape=box];
-"F42a775b7"[fillcolor=mediumvioletred,label="Feed
-18299c60",shape=box];
-"F6ef47c19"[fillcolor=mediumvioletred,label="Feed
-13b8a136",shape=box];
-"Fcb951e6b"[fillcolor=mediumvioletred,label="Feed
-58ca7206",shape=box];
-"Fdecd7b08"[fillcolor=mediumvioletred,label="Feed
-f7b26f25",shape=box];
-"Bcb951e6b"[fillcolor=seashell,label="ID: cb951e6b
-KEY: 26246347
+    // Nodes
+"H175896bd"[fillcolor=lightblue3,label="Head 
+175896bd"];
+"H27d09190"[fillcolor=lightblue3,label="Head 
+27d09190"];
+"H2cc47a0e"[fillcolor=lightblue3,label="Head 
+2cc47a0e"];
+"Hf6c52c0e"[fillcolor=lightblue3,label="Head 
+f6c52c0e"];
+"T2b4e8247"[fillcolor=sienna,label="Tail
+ 175896bd",shape=box];
+"T7aac7ee8"[fillcolor=sienna,label="Tail
+ 27d09190",shape=box];
+"Td3a8b019"[fillcolor=sienna,label="Tail
+ 2cc47a0e",shape=box];
+"Tcab59080"[fillcolor=sienna,label="Tail
+ f6c52c0e",shape=box];
+"Lc9381821"[fillcolor=seagreen,label="Latest
+ 175896bd",shape=box];
+"L82afd810"[fillcolor=seagreen,label="Latest
+ 27d09190",shape=box];
+"L36876ace"[fillcolor=seagreen,label="Latest
+ 2cc47a0e",shape=box];
+"L687cfd5c"[fillcolor=seagreen,label="Latest
+ f6c52c0e",shape=box];
+"F36876ace"[fillcolor=mediumvioletred,label="Feed
+d3a8b019",shape=box];
+"F4f55d40c"[fillcolor=mediumvioletred,label="Feed
+cab59080",shape=box];
+"F7527555a"[fillcolor=mediumvioletred,label="Feed
+7aac7ee8",shape=box];
+"F82afd810"[fillcolor=mediumvioletred,label="Feed
+2b4e8247",shape=box];
+"B82afd810"[fillcolor=seashell,label="ID: 82afd810
+KEY: 27d09190
 BDY: A6",shape="square"];
-"Bbe026a13"[fillcolor=seashell,label="ID: be026a13
-KEY: 0e354806
+"Bc9381821"[fillcolor=seashell,label="ID: c9381821
+KEY: 175896bd
 BDY: B3",shape="square"];
-"Bf522ff16"[fillcolor=seashell,label="ID: f522ff16
-KEY: 7887ec6d
+"B6c4f4e89"[fillcolor=seashell,label="ID: 6c4f4e89
+KEY: f6c52c0e
 BDY: A3",shape="square"];
-"B8e020a48"[fillcolor=seashell,label="ID: 8e020a48
-KEY: 0e354806
+"B28e6e2f5"[fillcolor=seashell,label="ID: 28e6e2f5
+KEY: 175896bd
 BDY: B2",shape="square"];
-"B6770907b"[fillcolor=seashell,label="ID: 6770907b
-KEY: 7887ec6d
+"Bd17d8561"[fillcolor=seashell,label="ID: d17d8561
+KEY: f6c52c0e
 BDY: A1",shape="square"];
-"B43d040ed"[fillcolor=seashell,label="ID: 43d040ed
-KEY: 0e354806
+"Bd8e2a27e"[fillcolor=seashell,label="ID: d8e2a27e
+KEY: 175896bd
 BDY: B1~",shape="square"];
-"B58ca7206"[fillcolor=seashell,label="ID: 58ca7206
-KEY: 0e354806
+"B2b4e8247"[fillcolor=seashell,label="ID: 2b4e8247
+KEY: 175896bd
 BDY: B0",shape="square"];
-"B6ef47c19"[fillcolor=seashell,label="ID: 6ef47c19
-KEY: 26246347
+"B7527555a"[fillcolor=seashell,label="ID: 7527555a
+KEY: 27d09190
 BDY: C2",shape="square"];
-"B4c5b733c"[fillcolor=seashell,label="ID: 4c5b733c
-KEY: 7887ec6d
+"Bd3077db1"[fillcolor=seashell,label="ID: d3077db1
+KEY: f6c52c0e
 BDY: A2~",shape="square"];
-"Bf7bb6275"[fillcolor=seashell,label="ID: f7bb6275
-KEY: 26246347
+"B17aa7faa"[fillcolor=seashell,label="ID: 17aa7faa
+KEY: 27d09190
 BDY: C1",shape="square"];
-"B13b8a136"[fillcolor=seashell,label="ID: 13b8a136
-KEY: 26246347
+"B7aac7ee8"[fillcolor=seashell,label="ID: 7aac7ee8
+KEY: 27d09190
 BDY: C0",shape="square"];
-"B42a775b7"[fillcolor=seashell,label="ID: 42a775b7
-KEY: 7887ec6d
-BDY: A4*",shape="square"];
-"B18299c60"[fillcolor=seashell,label="ID: 18299c60
-KEY: 7887ec6d
-BDY: A0~",shape="square"];
-"Bdecd7b08"[fillcolor=seashell,label="ID: decd7b08
-KEY: b4171b6f
+"B36876ace"[fillcolor=seashell,label="ID: 36876ace
+KEY: 2cc47a0e
 BDY: D2",shape="square"];
-"B74eb66ca"[fillcolor=seashell,label="ID: 74eb66ca
-KEY: 7887ec6d
+"B687cfd5c"[fillcolor=seashell,label="ID: 687cfd5c
+KEY: f6c52c0e
 BDY: A5*",shape="square"];
-"B4a5497d3"[fillcolor=seashell,label="ID: 4a5497d3
-KEY: b4171b6f
+"Bc0d9bd33"[fillcolor=seashell,label="ID: c0d9bd33
+KEY: 2cc47a0e
 BDY: D1",shape="square"];
-"Bf7b26f25"[fillcolor=seashell,label="ID: f7b26f25
-KEY: b4171b6f
+"Bd3a8b019"[fillcolor=seashell,label="ID: d3a8b019
+KEY: 2cc47a0e
 BDY: D0",shape="square"];
-// Edges
-"H0e354806" -> "Bcb951e6b";
-"H26246347" -> "B6ef47c19";
-"H7887ec6d" -> "B42a775b7";
-"Hb4171b6f" -> "Bdecd7b08";
-"B58ca7206" -> "T58ca7206"[dir=back];
-"B13b8a136" -> "T13b8a136"[dir=back];
-"B18299c60" -> "T18299c60"[dir=back];
-"Bf7b26f25" -> "Tf7b26f25"[dir=back];
-"Lbe026a13" -> "Bbe026a13";
-"Lcb951e6b" -> "Bcb951e6b";
-"L74eb66ca" -> "B74eb66ca";
-"Ldecd7b08" -> "Bdecd7b08";
-"F42a775b7" -> "B42a775b7";
-"F6ef47c19" -> "B6ef47c19";
-"Fcb951e6b" -> "Bcb951e6b";
-"Fdecd7b08" -> "Bdecd7b08";
-"Bcb951e6b" -> "Bbe026a13";
-"Bbe026a13" -> "Bf522ff16";
-"Bf522ff16" -> "B8e020a48";
-"B8e020a48" -> "B6770907b";
-"B6770907b" -> "B43d040ed";
-"B43d040ed" -> "B58ca7206";
-"B6ef47c19" -> "B4c5b733c";
-"B4c5b733c" -> "Bf7bb6275";
-"Bf7bb6275" -> "B13b8a136";
-"B42a775b7" -> "B18299c60";
-"Bdecd7b08" -> "B74eb66ca";
-"B74eb66ca" -> "B4a5497d3";
-"B4a5497d3" -> "Bf7b26f25";
-}
+"B4f55d40c"[fillcolor=seashell,label="ID: 4f55d40c
+KEY: f6c52c0e
+BDY: A4*",shape="square"];
+"Bcab59080"[fillcolor=seashell,label="ID: cab59080
+KEY: f6c52c0e
+BDY: A0~",shape="square"];
+
+    // Edges
+"H175896bd" -> "B82afd810";
+"H27d09190" -> "B7527555a";
+"H2cc47a0e" -> "B36876ace";
+"Hf6c52c0e" -> "B4f55d40c";
+"B2b4e8247" -> "T2b4e8247"[dir=back];
+"B7aac7ee8" -> "T7aac7ee8"[dir=back];
+"Bd3a8b019" -> "Td3a8b019"[dir=back];
+"Bcab59080" -> "Tcab59080"[dir=back];
+"Lc9381821" -> "Bc9381821";
+"L82afd810" -> "B82afd810";
+"L36876ace" -> "B36876ace";
+"L687cfd5c" -> "B687cfd5c";
+"F36876ace" -> "B36876ace";
+"F4f55d40c" -> "B4f55d40c";
+"F7527555a" -> "B7527555a";
+"F82afd810" -> "B82afd810";
+"B82afd810" -> "Bc9381821";
+"Bc9381821" -> "B6c4f4e89";
+"B6c4f4e89" -> "B28e6e2f5";
+"B28e6e2f5" -> "Bd17d8561";
+"Bd17d8561" -> "Bd8e2a27e";
+"Bd8e2a27e" -> "B2b4e8247";
+"B7527555a" -> "Bd3077db1";
+"Bd3077db1" -> "B17aa7faa";
+"B17aa7faa" -> "B7aac7ee8";
+"B36876ace" -> "B687cfd5c";
+"B687cfd5c" -> "Bc0d9bd33";
+"Bc0d9bd33" -> "Bd3a8b019";
+"B4f55d40c" -> "Bcab59080";
+
+    }
+  

@@ -27,11 +27,13 @@ function mkKey (type, key) {
 class PicoRepo { //  PicoJar (a jar for crypto-pickles)
   static isRepo (o) { return o && o[REPO_SYMBOL] }
 
-  allowDetached = false
-
   constructor (db, strategy = []) {
     this[REPO_SYMBOL] = true
     this._db = db
+
+    // Experimental flag
+    this.allowDetached = false
+
     // A jar usually boasts a label describing it's contents
     // so that people know what to expect to get and at least
     // what not to accidentally put.
@@ -183,8 +185,14 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
         continue
       }
 
-      // Allow everything to become fckd
-      if (this.allowDetached && block.isGenesis) {
+      // Check if the gateway to hell is open,
+      // intentions were good.
+      if (
+        this.allowDetached && (
+          block.isGenesis ||
+          await this._hasBlock(block.parentSig)
+        )
+      ) {
         await bumpHead()
         continue
       }

@@ -149,7 +149,7 @@ test('HeadRework; each head keeps track of own chain', async t => {
   const lB = await repo.loadLatest(B.slice(32))
   t.equal(lA.last.sig.hexSlice(), fD.get(-2).sig.hexSlice(), 'A lastWrite successfully')
   t.equal(lB.last.sig.hexSlice(), fB.get(-2).sig.hexSlice(), 'B lastWrite successfully')
-  // await dump(repo) // $ yarn test && xdot repo.dot
+  await dump(repo) // $ yarn test && xdot repo.dot
 })
 
 test('repo.rollback(head, ptr)', async t => {
@@ -255,6 +255,8 @@ test('Each head has a tag referencing the genesis', async t => {
   hexCmp(feeds[0].key, feed.get(-2).sig, 'tag was rolled back')
   hexCmp(feeds[0].value, feed.first.sig, 'chainId is inherited')
 
+  // TODO: Rollback to zero, assert tags were removed.
+
   // await dump(repo) // $ yarn test && xdot repo.dot
   function hexCmp (a, b, desc) {
     return t.equal(a?.hexSlice(0, 4), b?.hexSlice(0, 4), desc)
@@ -262,23 +264,30 @@ test('Each head has a tag referencing the genesis', async t => {
 })
 
 test('Experimental: author can create multiple feeds', async t => {
-  const repo = new Repo(DB(),)
+  const repo = new Repo(DB())
+  repo.allowDetached = true
   const { pk, sk } = Feed.signPair()
   const feedA = new Feed()
-  feedA.append('A0: Hello', sk)
-  feedA.append('A1: World', sk)
+  feedA.append('A0 Hello', sk)
+  feedA.append('A1 World', sk)
   await repo.merge(feedA)
 
   const feedB = new Feed()
-  feedB.append('B0: Cyborg', sk)
-  feedB.append('B1: Cool', sk)
+  feedB.append('A2 Cyborg', sk)
+  feedB.append('A3 Cool', sk)
 
   let written = await repo.merge(feedB)
   t.equal(written, 2, 'second feed persisted')
 
-  feedA.append('A2: of', sk)
-  feedA.append('A3: Hackers', sk)
+  feedA.append('A4: of', sk)
+  feedA.append('A5: Hackers', sk)
+
   written = await repo.merge(feedA)
-  // t.equal(written, 2, 'second feed persisted')
-  await dump(repo, 'test.dot') // $ yarn test && xdot repo.dot
+  t.equal(written, 2, 'first feed updated')
+
+  // TODO: don't overwrite tail tag if exists.. or what?
+  // const tail = await repo.tailOf(pk)
+  // t.equals(tail.hexSlice(), feedA.first.sig.hexSlice(), 'Tail not moved')
+
+  // await dump(repo, 'test.dot') // $ yarn test && xdot repo.dot
 })

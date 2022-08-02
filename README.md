@@ -94,6 +94,9 @@ effort and time.
 
 ## Changelog
 
+### 1.3.1 2022-08-02
+- added experimental mode 'allowDetached'
+
 ### 1.3.0 Eons later
 - added optional graphviz/dot generator
 - added index for chain-id
