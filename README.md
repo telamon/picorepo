@@ -4,6 +4,8 @@
 
 > Persistent efficient binary block storage for picofeeds
 
+This module is part of [picostack](https://github.com/telamon/picostack)
+
 This is a low-level blockstore for [picofeeds](https://github.com/telamon/picofeed/) that stores consistent chains using a fast access scheme.
 Uses a levelup interface for storage abstraction, works in nodejs (level-db) and in browser (IndexedDB) so besides
 adding this modules as a dependency you have to additionally add [levelup](https://github.com/Level/levelup) as a peer dep.
