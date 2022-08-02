@@ -4,7 +4,7 @@ const Feed = require('picofeed')
 const levelup = require('levelup')
 const memdown = require('memdown')
 const Repo = require('.')
-const { dump } = require('./dot')
+// const { dump } = require('./dot')
 const DB = () => levelup(memdown())
 
 test('PicoRepo: low-level block store', async t => {
@@ -149,7 +149,7 @@ test('HeadRework; each head keeps track of own chain', async t => {
   const lB = await repo.loadLatest(B.slice(32))
   t.equal(lA.last.sig.hexSlice(), fD.get(-2).sig.hexSlice(), 'A lastWrite successfully')
   t.equal(lB.last.sig.hexSlice(), fB.get(-2).sig.hexSlice(), 'B lastWrite successfully')
-  await dump(repo) // $ yarn test && xdot repo.dot
+  // await dump(repo) // $ yarn test && xdot repo.dot
 })
 
 test('repo.rollback(head, ptr)', async t => {
@@ -266,7 +266,7 @@ test('Each head has a tag referencing the genesis', async t => {
 test('Experimental: author can create multiple feeds', async t => {
   const repo = new Repo(DB())
   repo.allowDetached = true
-  const { pk, sk } = Feed.signPair()
+  const { sk } = Feed.signPair()
   const feedA = new Feed()
   feedA.append('A0 Hello', sk)
   feedA.append('A1 World', sk)
