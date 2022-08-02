@@ -5,11 +5,16 @@
  */
 const Feed = require('picofeed')
 const REPO_SYMBOL = Symbol.for('PicoRepo')
-const HEAD = 0
-const BLOCK = 1
-const TAIL = 2
-const LATEST = 3
-const REG = 4 // misc
+
+// Namespaces
+const HEAD = 0 // Feed end tag by Author PK
+const BLOCK = 1 // Block contents
+const TAIL = 2 // Feed start tag by Author PK
+const LATEST = 3 // Last write of Author PK
+const REG = 4 // misc application namespace/userland
+// Attempt to keep track of individual feeds in store
+// using the signature of their genesis block as "chainID"
+const CHAIN = 5 // Feed end tag by GenesisBlock Signature
 
 function mkKey (type, key) {
   if (!Buffer.isBuffer(key)) throw new Error('Expected key to be a Buffer')
@@ -74,17 +79,36 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     return buffer
   }
 
+  async _getChainPtr (name) {
+    const key = mkKey(CHAIN, name)
+    const buffer = await this._db.get(key)
+      .catch(err => {
+        if (!err.notFound) throw err
+      })
+    return buffer
+  }
+
   async writeBlock (block) {
     const key = mkKey(BLOCK, block.sig)
     // TODO: this method used to return false when block exists
     const buffer = Buffer.alloc(32 + block.buffer.length)
     block.key.copy(buffer, 0)
     block.buffer.copy(buffer, 32)
-    await this._db.put(key, buffer)
-    // console.debug('writeBlock: ', key.hexSlice())
+
+    const batch = []
+    batch.push({ type: 'put', key, value: buffer })
+
     if (block.isGenesis) {
-      await this._db.put(mkKey(TAIL, block.key), block.sig)
+      batch.push({ type: 'put', key: mkKey(TAIL, block.key), value: block.sig })
+      batch.push({ type: 'put', key: mkKey(CHAIN, block.sig), value: block.sig })
+    } else {
+      // Move ChainID tag
+      const prevKey = mkKey(CHAIN, block.parentSig)
+      const chainId = await this._db.get(prevKey)
+      batch.push({ type: 'put', key: mkKey(CHAIN, block.sig), value: chainId })
+      batch.push({ type: 'del', key: prevKey })
     }
+    await this._db.batch(batch)
     return true
   }
 
@@ -304,13 +328,30 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
       }
     } */
 
-    // Adjust new head
+    const isFeedPurged = evicted.first.isGenesis
+
+    // -- Adjust new head
     batch.push({ type: 'del', key: mkKey(HEAD, head) })
-    if (ptr) batch.push({ type: 'put', key: mkKey(HEAD, head), value: ptr })
-    else if (!evicted.first.isGenesis) {
+    if (ptr) { // Partial Rollback, part of feed still exists
+      batch.push({ type: 'put', key: mkKey(HEAD, head), value: ptr })
+    } else if (!isFeedPurged) {
+      // Middle segment of a feed was left in repo, supporting this might be bad.
       batch.push({ type: 'put', key: mkKey(HEAD, head), value: evicted.first.parentSig })
     }
-    // For now, purge all deleted 'latest'-tags
+
+    // Relocated chain-identifier
+    // tag should be indexed under ptr of head
+    batch.push({ type: 'del', key: mkKey(CHAIN, evicted.last.sig) })
+    const chainId = await this._getChainPtr(evicted.last.sig)
+    if (chainId && !isFeedPurged) {
+      batch.push({
+        type: 'put',
+        key: mkKey(CHAIN, evicted.first.parentSig),
+        value: chainId
+      })
+    }
+
+    // For now, purge dangling 'latest'-tags
     for (const key of relocate) {
       batch.push({ type: 'del', key: mkKey(LATEST, key) })
     }
@@ -369,10 +410,38 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
   }
 
   async listHeads () {
-    const query = {
+    return this._listRange({
       gt: mkKey(HEAD, Buffer.alloc(32).fill(0)),
       lt: mkKey(HEAD, Buffer.alloc(32).fill(0xff))
-    }
+    })
+  }
+
+  async listTails () {
+    return this._listRange({
+      gt: mkKey(TAIL, Buffer.alloc(32).fill(0)),
+      lt: mkKey(TAIL, Buffer.alloc(32).fill(0xff))
+    })
+  }
+
+  async listLatest () {
+    return this._listRange({
+      gt: mkKey(LATEST, Buffer.alloc(32).fill(0)),
+      lt: mkKey(LATEST, Buffer.alloc(32).fill(0xff))
+    })
+  }
+
+  /**
+   * Returns a list of unique feeds in repo.
+   * [blockPtr, chainId+(length?)]
+   */
+  async listFeeds () {
+    return this._listRange({
+      gt: mkKey(CHAIN, Buffer.alloc(32).fill(0)),
+      lt: mkKey(CHAIN, Buffer.alloc(32).fill(0xff))
+    })
+  }
+
+  async _listRange (query) {
     const iter = this._db.iterator(query)
     const result = []
     while (true) {

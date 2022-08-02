@@ -2,7 +2,10 @@
   "name": "picorepo",
   "version": "1.2.4",
   "description": "Persistent efficient binary block storage for picofeeds",
-  "main": "index.js",
+  "files": [
+    "index.js",
+    "dot.js"
+  ],
   "scripts": {
     "lint": "standard",
     "test": "tape test.js",
@@ -19,7 +22,7 @@
     "url": "https://github.com/telamon/picorepo"
   },
   "homepage": "https://github.com/telamon/picorepo",
-  "dependencies": {
+  "peerDependencies": {
     "picofeed": "^3.4.0"
   },
   "devDependencies": {

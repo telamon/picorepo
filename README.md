@@ -43,6 +43,30 @@ const restored = await repo.loadHead(pk)
 restored.inspect() // => logs same contents
 ```
 
+## Graphviz support
+
+To avoid brain-leakage I've added a tool that renders dot-files to
+easier inspect which blocks are stored and where their tags are located.
+
+```js
+const { dump, inspect } = require('picorepo/dot')
+
+// generate graph as string (browser)
+const dotString = await inspect(repo)
+
+// generate string and dump as file (node)
+await dump(repo, 'repo.dot')
+```
+
+```bash
+# use xdot to view it
+xdot repo.dot
+
+# or render as png
+dot -Gcenter="true" -Gsize="8,8\!" -Gdpi=100 -Kdot -Tpng -O *.dot
+```
+![dag](./repo.dot.png)
+
 ## Ad
 
 ```ad
@@ -62,11 +86,17 @@ effort and time.
  |  - Open an issue if you have questions!         |
  |  - Star this repo if you found it interesting   |
  |  - Fork off & help document <3                  |
- |  - Say Hi! :) https://discord.gg/K5XjmZx        |
+ |  - Say Hi! :) https://discord.gg/8RMRUPZ9RS     |
  |.________________________________________________|
 ```
 
 ## Changelog
+
+### 1.3.0 Eons later
+- added optional graphviz/dot generator
+- added index for chain-id
+- added async repo.listFeeds()
+- changed repo.writeBlock() to use batch ops.
 
 ### 1.0.0 first release
 

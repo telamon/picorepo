@@ -4,6 +4,7 @@ const Feed = require('picofeed')
 const levelup = require('levelup')
 const memdown = require('memdown')
 const Repo = require('.')
+// const { dump } = require('./dot')
 const DB = () => levelup(memdown())
 
 test('PicoRepo: low-level block store', async t => {
@@ -148,6 +149,7 @@ test('HeadRework; each head keeps track of own chain', async t => {
   const lB = await repo.loadLatest(B.slice(32))
   t.equal(lA.last.sig.hexSlice(), fD.get(-2).sig.hexSlice(), 'A lastWrite successfully')
   t.equal(lB.last.sig.hexSlice(), fB.get(-2).sig.hexSlice(), 'B lastWrite successfully')
+  // await dump(repo) // $ yarn test && xdot repo.dot
 })
 
 test('repo.rollback(head, ptr)', async t => {
@@ -217,6 +219,43 @@ test('repo.rollback(head, ptr)', async t => {
   // TODO: latest-tags are deleted for now.
   // hexCmp(latestB, B2.sig, 'Latest B ptr equals B2')
   // hexCmp(latestA, A1.sig, 'Latest A ptr equals A1')
+  function hexCmp (a, b, desc) {
+    return t.equal(a?.hexSlice(0, 4), b?.hexSlice(0, 4), desc)
+  }
+})
+
+test('Each head has a tag referencing the genesis', async t => {
+  const repo = new Repo(DB())
+  const { pk, sk } = Feed.signPair()
+  const feed = new Feed()
+
+  feed.append('0: Hello', sk)
+  await repo.merge(feed)
+  let feeds = await repo.listFeeds()
+  t.equal(feeds.length, 1, 'One unique feed')
+  hexCmp(feeds[0].key, feeds[0].value, 'Genesis references itself')
+  hexCmp(feed.first.sig, feeds[0].value, 'ChainId equals genesis sig')
+
+  feed.append('1: world', sk)
+  feed.append('2: of', sk)
+  feed.append('3: DAGs', sk)
+  await repo.merge(feed)
+
+  feeds = await repo.listFeeds()
+  t.equal(feeds.length, 1, 'One unique feed')
+
+  hexCmp(feeds[0].key, feed.last.sig, 'key equals last block signature')
+  hexCmp(feeds[0].value, feed.first.sig, 'chainId is inherited')
+
+  await repo.rollback(pk, feed.get(-2).sig)
+
+  feeds = await repo.listFeeds()
+  t.equal(feeds.length, 1, 'One unique feed')
+
+  hexCmp(feeds[0].key, feed.get(-2).sig, 'tag was rolled back')
+  hexCmp(feeds[0].value, feed.first.sig, 'chainId is inherited')
+
+  // await dump(repo) // $ yarn test && xdot repo.dot
   function hexCmp (a, b, desc) {
     return t.equal(a?.hexSlice(0, 4), b?.hexSlice(0, 4), desc)
   }
