@@ -25,13 +25,6 @@ test('PicoRepo: low-level block store', async t => {
     const storedBlock = await repo.readBlock(blockId)
     t.ok(f.last.buffer.equals(storedBlock.buffer))
     t.ok(f.last.key.equals(storedBlock.key))
-
-    /* use repo.rollback()
-    const deleted = await repo.deleteBlock(blockId)
-    t.ok(deleted)
-    const notFound = await repo.readBlock(blockId)
-    t.notOk(notFound)
-    */
   } catch (err) { t.error(err) }
   t.end()
 })
@@ -131,16 +124,8 @@ test('HeadRework; each head keeps track of own chain', async t => {
   fB.append('A6', C)
   await repo.merge(fB.slice(-1))
   const hA = await repo.loadHead(A.slice(32))
-  // console.info('Loaded A from repo')
-  // hA.inspect()
-  // console.info('Expected A equal')
-  // fA.inspect()
 
   const hB = await repo.loadHead(B.slice(32))
-  // console.info('Loaded B from repo')
-  // hB.inspect()
-  // console.info('Expected B equal')
-  // fB.inspect()
 
   t.equal(hA.last.sig.hexSlice(), fA.last.sig.hexSlice(), 'A loaded successfully')
   t.equal(hB.last.sig.hexSlice(), fB.last.sig.hexSlice(), 'B loaded successfully')
@@ -149,7 +134,6 @@ test('HeadRework; each head keeps track of own chain', async t => {
   const lB = await repo.loadLatest(B.slice(32))
   t.equal(lA.last.sig.hexSlice(), fD.get(-2).sig.hexSlice(), 'A lastWrite successfully')
   t.equal(lB.last.sig.hexSlice(), fB.get(-2).sig.hexSlice(), 'B lastWrite successfully')
-  // await dump(repo) // $ yarn test && xdot repo.dot
 })
 
 test('repo.rollback(head, ptr)', async t => {
@@ -191,10 +175,6 @@ test('repo.rollback(head, ptr)', async t => {
   let latestA = await repo.latestOf(A.slice(32))
   let currentB = await repo.headOf(B.slice(32))
   let latestB = await repo.latestOf(B.slice(32))
-  // console.log('Feed A')
-  // fA.inspect()
-  // console.log('Feed B')
-  // fB.inspect()
 
   hexCmp(latestB, B3.sig, 'Latest B ptr equals B3')
   hexCmp(currentB, B2.sig, 'Head B ptr equals B2')
@@ -255,9 +235,6 @@ test('Each head has a tag referencing the genesis', async t => {
   hexCmp(feeds[0].key, feed.get(-2).sig, 'tag was rolled back')
   hexCmp(feeds[0].value, feed.first.sig, 'chainId is inherited')
 
-  // TODO: Rollback to zero, assert tags were removed.
-
-  // await dump(repo) // $ yarn test && xdot repo.dot
   function hexCmp (a, b, desc) {
     return t.equal(a?.hexSlice(0, 4), b?.hexSlice(0, 4), desc)
   }
@@ -288,8 +265,6 @@ test('Experimental: author can create multiple feeds', async t => {
   // TODO: don't overwrite tail tag if exists.. or what?
   // const tail = await repo.tailOf(pk)
   // t.equals(tail.hexSlice(), feedA.first.sig.hexSlice(), 'Tail not moved')
-
-  // await dump(repo, 'test.dot') // $ yarn test && xdot repo.dot
 })
 
 test('repo.resolveFeed(sig) returns entire feed', async t => {
@@ -312,7 +287,19 @@ test('repo.resolveFeed(sig) returns entire feed', async t => {
   await repo.rollback(pk, f.get(-3).sig)
   f = await repo.resolveFeed(feedA.get(2).sig)
   t.equal(f.last.body.toString(), '5')
-  await require('./dot').dump(repo, 'test.dot')
+  // await require('./dot').dump(repo, 'test.dot')
   await repo.rollback(pk)
   t.equal((await repo.listFeeds()).length, 0, 'Empty repo')
+})
+
+test('resolveFeed() fast-tracks tip-pointers correctly', async t => {
+  const repo = new Repo(DB())
+  const { sk } = Feed.signPair()
+  const f = new Feed()
+  f.append('0', sk)
+  await repo.merge(f)
+  f.append('1', sk)
+  await repo.merge(f)
+  const b = await repo.resolveFeed(f.last.sig)
+  t.equal(f.length, b.length, 'Full chain loaded')
 })

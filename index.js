@@ -93,9 +93,9 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
       // Move ChainID tag
       const prevKey = mkKey(CHAIN_TAIL, block.parentSig)
       const chainId = await this._db.get(prevKey)
+      batch.push({ type: 'del', key: prevKey })
       batch.push({ type: 'put', key: mkKey(CHAIN_TAIL, block.sig), value: chainId })
       batch.push({ type: 'put', key: mkKey(CHAIN_HEAD, chainId), value: block.sig })
-      batch.push({ type: 'del', key: prevKey })
     }
     await this._db.batch(batch)
     return true
@@ -134,8 +134,12 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
    * Returns entire feed given a blockId of the set.
    */
   async resolveFeed (sig, stopCallback = undefined) {
+    // O-1 constant lookup via TAIL tag
     let tip = await this._getTag(CHAIN_TAIL, sig)
-    if (tip) return this.loadFeed(tip, stopCallback)
+    // Assuming that sig === CHAIN_HEAD(CHAIN_TAIL(sig))
+    if (tip) return this.loadFeed(sig, stopCallback)
+
+    // Traverse backwards to find HEAD tag
     for await (const block of this._chainLoad(sig)) {
       if (!block.isGenesis) continue
       tip = await this._getTag(CHAIN_HEAD, block.sig)
