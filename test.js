@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 const test = require('tape')
 const Feed = require('picofeed')
-const levelup = require('levelup')
-const memdown = require('memdown')
+const { MemoryLevel } = require('memory-level')
 const Repo = require('.')
 // const { dump } = require('./dot')
-const DB = () => levelup(memdown())
+const DB = () => new MemoryLevel({
+  keyEncoding: 'buffer',
+  valueEncoding: 'buffer'
+})
 
 test('PicoRepo: low-level block store', async t => {
   try {
