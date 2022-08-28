@@ -1,122 +1,419 @@
 
     digraph G {
-      graph [fontname="fixed",overlap="false",center="1",ratio="compress",label="[PicoRepo] Authors: 4 Feeds: 4, Blocks: 17, Bytes: 2283 (39)",rankdir=BT];
-      node [style=filled,fillcolor=white,shape="circle"];
+      graph [pad=0.2,labelloc="t",fontcolor="#bbbba9",bgcolor="#2f383e",fontname="fixed",overlap="false",center="1",ratio="compress",label="[PicoRepo] Authors: 3 Feeds: 4, Blocks: 17, Bytes: 3.2kB (2.2kB 70.48%)",rankdir=BT];
+      edge [color="black",fillcolor="#2c323d",weight=2.0];
+      node [style=filled,fillcolor="#2c323d",color="#818e85",shape="rect",fontcolor="#bbbba9",shape=box];
     // Nodes
-"H175896bd"[fillcolor=lightblue3,label="Head 
-175896bd"];
-"H27d09190"[fillcolor=lightblue3,label="Head 
-27d09190"];
-"H2cc47a0e"[fillcolor=lightblue3,label="Head 
-2cc47a0e"];
-"Hf6c52c0e"[fillcolor=lightblue3,label="Head 
-f6c52c0e"];
-"T2b4e8247"[fillcolor=sienna,label="Tail
- 175896bd",shape=box];
-"T7aac7ee8"[fillcolor=sienna,label="Tail
- 27d09190",shape=box];
-"Td3a8b019"[fillcolor=sienna,label="Tail
- 2cc47a0e",shape=box];
-"Tcab59080"[fillcolor=sienna,label="Tail
- f6c52c0e",shape=box];
-"Lc9381821"[fillcolor=seagreen,label="Latest
- 175896bd",shape=box];
-"L82afd810"[fillcolor=seagreen,label="Latest
- 27d09190",shape=box];
-"L36876ace"[fillcolor=seagreen,label="Latest
- 2cc47a0e",shape=box];
-"L687cfd5c"[fillcolor=seagreen,label="Latest
- f6c52c0e",shape=box];
-"F36876ace"[fillcolor=mediumvioletred,label="Feed
-d3a8b019",shape=box];
-"F4f55d40c"[fillcolor=mediumvioletred,label="Feed
-cab59080",shape=box];
-"F7527555a"[fillcolor=mediumvioletred,label="Feed
-7aac7ee8",shape=box];
-"F82afd810"[fillcolor=mediumvioletred,label="Feed
-2b4e8247",shape=box];
-"B82afd810"[fillcolor=seashell,label="ID: 82afd810
-KEY: 27d09190
-BDY: A6",shape="square"];
-"Bc9381821"[fillcolor=seashell,label="ID: c9381821
-KEY: 175896bd
-BDY: B3",shape="square"];
-"B6c4f4e89"[fillcolor=seashell,label="ID: 6c4f4e89
-KEY: f6c52c0e
-BDY: A3",shape="square"];
-"B28e6e2f5"[fillcolor=seashell,label="ID: 28e6e2f5
-KEY: 175896bd
-BDY: B2",shape="square"];
-"Bd17d8561"[fillcolor=seashell,label="ID: d17d8561
-KEY: f6c52c0e
-BDY: A1",shape="square"];
-"Bd8e2a27e"[fillcolor=seashell,label="ID: d8e2a27e
-KEY: 175896bd
-BDY: B1~",shape="square"];
-"B2b4e8247"[fillcolor=seashell,label="ID: 2b4e8247
-KEY: 175896bd
-BDY: B0",shape="square"];
-"B7527555a"[fillcolor=seashell,label="ID: 7527555a
-KEY: 27d09190
-BDY: C2",shape="square"];
-"Bd3077db1"[fillcolor=seashell,label="ID: d3077db1
-KEY: f6c52c0e
-BDY: A2~",shape="square"];
-"B17aa7faa"[fillcolor=seashell,label="ID: 17aa7faa
-KEY: 27d09190
-BDY: C1",shape="square"];
-"B7aac7ee8"[fillcolor=seashell,label="ID: 7aac7ee8
-KEY: 27d09190
-BDY: C0",shape="square"];
-"B36876ace"[fillcolor=seashell,label="ID: 36876ace
-KEY: 2cc47a0e
-BDY: D2",shape="square"];
-"B687cfd5c"[fillcolor=seashell,label="ID: 687cfd5c
-KEY: f6c52c0e
-BDY: A5*",shape="square"];
-"Bc0d9bd33"[fillcolor=seashell,label="ID: c0d9bd33
-KEY: 2cc47a0e
-BDY: D1",shape="square"];
-"Bd3a8b019"[fillcolor=seashell,label="ID: d3a8b019
-KEY: 2cc47a0e
-BDY: D0",shape="square"];
-"B4f55d40c"[fillcolor=seashell,label="ID: 4f55d40c
-KEY: f6c52c0e
-BDY: A4*",shape="square"];
-"Bcab59080"[fillcolor=seashell,label="ID: cab59080
-KEY: f6c52c0e
-BDY: A0~",shape="square"];
+"H5451e241"
+      [
+        fontcolor="#cd94b0",
+        color="#cd94b0",
+        label="Author Head 
+5451e241"
+      ];
+"Ha51b6ec0"
+      [
+        fontcolor="#cd94b0",
+        color="#cd94b0",
+        label="Author Head 
+a51b6ec0"
+      ];
+"Hf0053b2d"
+      [
+        fontcolor="#cd94b0",
+        color="#cd94b0",
+        label="Author Head 
+f0053b2d"
+      ];
+"Te843d8d0"
+      [
+        fontcolor="#cd94b0",
+        color="#cd94b0",
+        label="Author Tail
+ 5451e241"
+      ];
+"T023e7cdf"
+      [
+        fontcolor="#cd94b0",
+        color="#cd94b0",
+        label="Author Tail
+ a51b6ec0"
+      ];
+"Tb2d1414f"
+      [
+        fontcolor="#cd94b0",
+        color="#cd94b0",
+        label="Author Tail
+ f0053b2d"
+      ];
+"L1ee10c1d"
+      [
+        fontcolor="#9ab278",
+        color="#9ab278",
+        label="Latest
+ 5451e241"
+      ];
+"L259f15c8"
+      [
+        fontcolor="#9ab278",
+        color="#9ab278",
+        label="Latest
+ a51b6ec0"
+      ];
+"Ld7c4a688"
+      [
+        fontcolor="#9ab278",
+        color="#9ab278",
+        label="Latest
+ f0053b2d"
+      ];
+"F1ee10c1d"
+      [
+        fontcolor="#db797b",
+        color="#db797b",
+        label="Chain Tail
+e843d8d0"
+      ];
+"F90991f2f"
+      [
+        fontcolor="#db797b",
+        color="#db797b",
+        label="Chain Tail
+4de56e4a"
+      ];
+"Fd7c4a688"
+      [
+        fontcolor="#db797b",
+        color="#db797b",
+        label="Chain Tail
+b2d1414f"
+      ];
+"Fe920e13c"
+      [
+        fontcolor="#db797b",
+        color="#db797b",
+        label="Chain Tail
+023e7cdf"
+      ];
+"FT023e7cdf"
+      [
+        fontcolor="#db797b",
+        color="#db797b",
+        label="Chain Head
+023e7cdf"
+      ];
+"FT4de56e4a"
+      [
+        fontcolor="#db797b",
+        color="#db797b",
+        label="Chain Head
+4de56e4a"
+      ];
+"FTb2d1414f"
+      [
+        fontcolor="#db797b",
+        color="#db797b",
+        label="Chain Head
+b2d1414f"
+      ];
+"FTe843d8d0"
+      [
+        fontcolor="#db797b",
+        color="#db797b",
+        label="Chain Head
+e843d8d0"
+      ];
+"B1ee10c1d"
+        [
+          fontcolor="#bbbba9",
+          color="#bbbba9"
+          shape="square",
+          label="
+🧌2
+action:
+Die
+"
+        ];
+"B259f15c8"
+        [
+          fontcolor="#bbbba9",
+          color="#bbbba9"
+          shape="square",
+          label="
+🤴3
+action:
+Attack
+"
+        ];
+"B1630a0eb"
+        [
+          fontcolor="#bbbba9",
+          color="#bbbba9"
+          shape="square",
+          label="
+🧌1
+action:
+Eat
+"
+        ];
+"B81d77322"
+        [
+          fontcolor="#bbbba9",
+          color="#bbbba9"
+          shape="square",
+          label="
+👹2
+action:
+Give food
+"
+        ];
+"Be843d8d0"
+        [
+          fontcolor="#bbbba9",
+          color="#bbbba9"
+          shape="square",
+          label="
+🧌0
+Goblin
+LVL10
+HP30
+"
+        ];
+"Be920e13c"
+        [
+          fontcolor="#bbbba9",
+          color="#bbbba9"
+          shape="square",
+          label="
+🤴4
+action:
+Run Away
+"
+        ];
+"B391e450a"
+        [
+          fontcolor="#bbbba9",
+          color="#bbbba9"
+          shape="square",
+          label="
+👹7
+action:
+Attack
+"
+        ];
+"Bbc6ad16a"
+        [
+          fontcolor="#bbbba9",
+          color="#bbbba9"
+          shape="square",
+          label="
+🤴2
+action:
+Talk
+"
+        ];
+"B23975411"
+        [
+          fontcolor="#bbbba9",
+          color="#bbbba9"
+          shape="square",
+          label="
+🤴1
+action:
+Walk
+"
+        ];
+"B023e7cdf"
+        [
+          fontcolor="#bbbba9",
+          color="#bbbba9"
+          shape="square",
+          label="
+🤴0
+Hero
+LVL255
+HP5000
+"
+        ];
+"Bd7c4a688"
+        [
+          fontcolor="#bbbba9",
+          color="#bbbba9"
+          shape="square",
+          label="
+👹6
+action:
+Fear Lv1
+"
+        ];
+"Bb2d1414f"
+        [
+          fontcolor="#bbbba9",
+          color="#bbbba9"
+          shape="square",
+          label="
+👹5
+Skeleton
+LVL5
+HP100
+"
+        ];
+"B90991f2f"
+        [
+          fontcolor="#73a8a2",
+          color="#73a8a2"
+          shape="square",
+          label="
+👹8
+action:
+Celebrate
+"
+        ];
+"Bb2cd317f"
+        [
+          fontcolor="#73a8a2",
+          color="#73a8a2"
+          shape="square",
+          label="
+👹4
+action:
+Summon
+"
+        ];
+"B69bcf9dd"
+        [
+          fontcolor="#73a8a2",
+          color="#73a8a2"
+          shape="square",
+          label="
+👹3
+action:
+Eat
+"
+        ];
+"Bfaea5bb8"
+        [
+          fontcolor="#73a8a2",
+          color="#73a8a2"
+          shape="square",
+          label="
+👹1
+action:
+Cook dinner
+"
+        ];
+"B4de56e4a"
+        [
+          fontcolor="#73a8a2",
+          color="#73a8a2"
+          shape="square",
+          label="
+👹0
+Goblin Mage
+LVL15
+HP29
+"
+        ];
 
     // Edges
-"H175896bd" -> "B82afd810";
-"H27d09190" -> "B7527555a";
-"H2cc47a0e" -> "B36876ace";
-"Hf6c52c0e" -> "B4f55d40c";
-"B2b4e8247" -> "T2b4e8247"[dir=back];
-"B7aac7ee8" -> "T7aac7ee8"[dir=back];
-"Bd3a8b019" -> "Td3a8b019"[dir=back];
-"Bcab59080" -> "Tcab59080"[dir=back];
-"Lc9381821" -> "Bc9381821";
-"L82afd810" -> "B82afd810";
-"L36876ace" -> "B36876ace";
-"L687cfd5c" -> "B687cfd5c";
-"F36876ace" -> "B36876ace";
-"F4f55d40c" -> "B4f55d40c";
-"F7527555a" -> "B7527555a";
-"F82afd810" -> "B82afd810";
-"B82afd810" -> "Bc9381821";
-"Bc9381821" -> "B6c4f4e89";
-"B6c4f4e89" -> "B28e6e2f5";
-"B28e6e2f5" -> "Bd17d8561";
-"Bd17d8561" -> "Bd8e2a27e";
-"Bd8e2a27e" -> "B2b4e8247";
-"B7527555a" -> "Bd3077db1";
-"Bd3077db1" -> "B17aa7faa";
-"B17aa7faa" -> "B7aac7ee8";
-"B36876ace" -> "B687cfd5c";
-"B687cfd5c" -> "Bc0d9bd33";
-"Bc0d9bd33" -> "Bd3a8b019";
-"B4f55d40c" -> "Bcab59080";
+"H5451e241" -> "B1ee10c1d"[arrowhead=odot];
+"Ha51b6ec0" -> "Be920e13c"[arrowhead=odot];
+"Hf0053b2d" -> "Bd7c4a688"[arrowhead=odot];
+"Be843d8d0" -> "Te843d8d0"[dir=back,arrowtail=odot];
+"B023e7cdf" -> "T023e7cdf"[dir=back,arrowtail=odot];
+"Bb2d1414f" -> "Tb2d1414f"[dir=back,arrowtail=odot];
+"L1ee10c1d" -> "B1ee10c1d"[arrowhead=odot];
+"L259f15c8" -> "B259f15c8"[arrowhead=odot];
+"Ld7c4a688" -> "Bd7c4a688"[arrowhead=odot];
+"Be843d8d0" -> "F1ee10c1d"[dir=back,arrowtail=odot];
+"B4de56e4a" -> "F90991f2f"[dir=back,arrowtail=odot];
+"Bb2d1414f" -> "Fd7c4a688"[dir=back,arrowtail=odot];
+"B023e7cdf" -> "Fe920e13c"[dir=back,arrowtail=odot];
+"FT023e7cdf" -> "Be920e13c"[arrowhead=odot];
+"FT4de56e4a" -> "B90991f2f"[arrowhead=odot];
+"FTb2d1414f" -> "Bd7c4a688"[arrowhead=odot];
+"FTe843d8d0" -> "B1ee10c1d"[arrowhead=odot];
+"B1ee10c1d" -> "B259f15c8"
+          [
+            color="#818e85",
+            fillcolor="#bbbba9",
+            weight=1.0
+          ];
+"B259f15c8" -> "Bbc6ad16a"[style=dashed,weight=0.1,color="#d08c6d"];
+"B259f15c8" -> "B1630a0eb"
+          [
+            color="#818e85",
+            fillcolor="#bbbba9",
+            weight=1.0
+          ];
+"B1630a0eb" -> "B81d77322"
+          [
+            color="#818e85",
+            fillcolor="#bbbba9",
+            weight=1.0
+          ];
+"B81d77322" -> "Bfaea5bb8"[style=dashed,weight=0.1,color="#d08c6d"];
+"B81d77322" -> "Be843d8d0"
+          [
+            color="#818e85",
+            fillcolor="#bbbba9",
+            weight=1.0
+          ];
+"Be920e13c" -> "B391e450a"
+          [
+            color="#818e85",
+            fillcolor="#bbbba9",
+            weight=1.0
+          ];
+"B391e450a" -> "Bd7c4a688"[style=dashed,weight=0.1,color="#d08c6d"];
+"B391e450a" -> "Bbc6ad16a"
+          [
+            color="#818e85",
+            fillcolor="#bbbba9",
+            weight=1.0
+          ];
+"Bbc6ad16a" -> "B23975411"
+          [
+            color="#818e85",
+            fillcolor="#bbbba9",
+            weight=1.0
+          ];
+"B23975411" -> "B023e7cdf"
+          [
+            color="#818e85",
+            fillcolor="#bbbba9",
+            weight=1.0
+          ];
+"Bd7c4a688" -> "Bb2d1414f"
+          [
+            color="#818e85",
+            fillcolor="#bbbba9",
+            weight=1.0
+          ];
+"B90991f2f" -> "Bb2cd317f"
+          [
+            color="#818e85",
+            fillcolor="#bbbba9",
+            weight=1.0
+          ];
+"Bb2cd317f" -> "B69bcf9dd"
+          [
+            color="#818e85",
+            fillcolor="#bbbba9",
+            weight=1.0
+          ];
+"B69bcf9dd" -> "Bfaea5bb8"
+          [
+            color="#818e85",
+            fillcolor="#bbbba9",
+            weight=1.0
+          ];
+"Bfaea5bb8" -> "B4de56e4a"
+          [
+            color="#818e85",
+            fillcolor="#bbbba9",
+            weight=1.0
+          ];
 
     }
   

@@ -305,3 +305,72 @@ test('resolveFeed() fast-tracks tip-pointers correctly', async t => {
   const b = await repo.resolveFeed(f.last.sig)
   t.equal(f.length, b.length, 'Full chain loaded')
 })
+
+test.only('Dot graph should be customizable', async t => {
+  const enc = JSON.stringify
+  const repo = new Repo(DB())
+  repo.allowDetached = true
+  const hero = Feed.signPair()
+  const monster1 = Feed.signPair()
+  const monster2 = Feed.signPair()
+  const feedA = new Feed()
+  const feedB = new Feed()
+  const feedC = new Feed()
+  feedA.append(enc({ name: 'Hero', lvl: 255, hp: 5000, seq: 0 }), hero.sk)
+  feedB.append(enc({ name: 'Goblin', lvl: 10, hp: 30, seq: 0 }), monster1.sk)
+  feedC.append(enc({ name: 'Goblin Mage', lvl: 15, hp: 29, seq: 0 }), monster2.sk)
+  feedC.append(enc({ action: 'Cook dinner', seq: 1 }), monster2.sk)
+  feedB.append(enc({ action: 'Give food', ref: feedC.last.sig.hexSlice(), seq: 2 }), monster2.sk)
+  feedB.append(enc({ action: 'Eat', seq: 1 }), monster1.sk)
+  feedC.append(enc({ action: 'Eat', seq: 3 }), monster2.sk)
+
+  feedA.append(enc({ action: 'Walk', seq: 1 }), hero.sk)
+  feedA.append(enc({ action: 'Talk', seq: 2 }), hero.sk)
+  feedB.append(enc({ action: 'Attack', seq: 3, ref: feedA.last.sig.hexSlice() }), hero.sk)
+  feedB.append(enc({ action: 'Die', seq: 2 }), monster1.sk)
+  feedC.append(enc({ action: 'Summon', seq: 4 }), monster2.sk)
+  const feedS = new Feed()
+  feedS.append(enc({ name: 'Skeleton', lvl: 5, hp: 100, seq: 5 }), monster2.sk)
+  feedS.append(enc({ action: 'Fear Lv1', seq: 6 }), monster2.sk)
+  feedA.append(enc({ action: 'Attack', seq: 7, ref: feedS.last.sig.hexSlice() }), monster2.sk)
+  feedA.append(enc({ action: 'Run Away', seq: 4 }), hero.sk)
+  feedC.append(enc({ action: 'Celebrate', seq: 8 }), monster2.sk)
+
+  const authors = {
+    [hero.pk.hexSlice(0, 3)]: '🤴',
+    [monster1.pk.hexSlice(0, 3)]: '🧌',
+    [monster2.pk.hexSlice(0, 3)]: '👹'
+  }
+  await repo.merge(feedA)
+  await repo.merge(feedB)
+  await repo.merge(feedC)
+  await repo.merge(feedS)
+  const dot = await require('./dot').inspect(repo, {
+    blockLabel (block, builder) {
+      const d = JSON.parse(block.body)
+      if (d.name) {
+        return bq`
+          ${authors[block.key.hexSlice(0, 3)]}${d.seq}
+          ${d.name}
+          LVL${d.lvl}
+          HP${d.hp}
+        `
+      }
+      if (d.ref) builder.link(Buffer.from(d.ref, 'hex'))
+      return bq`
+        ${authors[block.key.hexSlice(0, 3)]}${d.seq}
+        action:
+        ${d.action}
+      `
+    }
+  })
+  t.ok(dot)
+  require('fs').writeFileSync('test.dot', dot)
+})
+
+// nice this is a useful hack for multiline strings
+function bq (str, ...tokens) {
+  str = [...str]
+  for (let i = tokens.length; i > 0; i--) str.splice(i, 0, tokens.pop())
+  return str.join('').split('\n').map(t => t.trim()).join('\n')
+}

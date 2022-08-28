@@ -1,3 +1,14 @@
+const C_BG = '#2f383e' // graphite
+const C_BG2 = '#2c323d' // slate
+const C_FG = '#bbbba9' // cream
+const C_FG2 = '#818e85' // subtle
+const C_BGH = '#cd94b0' // violet
+const C_BGC = '#db797b' // rust
+const C_BGL = '#9ab278' // leaf
+const C_BGO = '#73a8a2' // sky/sea
+const C_P = '#d08c6d' // copper
+const C_Y = '#cbaf78' // ochre
+
 async function inspect (repo, opts = {}) {
   const heads = await repo.listHeads()
   const tails = await repo.listTails()
@@ -7,7 +18,7 @@ async function inspect (repo, opts = {}) {
 
   const colors = opts.colors || {}
   const makeBlockLabel = opts.blockLabel || (block => {
-    const body = block.body.subarray(0, 8).toString('utf8')
+    const body = block.body.subarray(0, 8).toString('hex')
     const id = hx8(block.sig)
     const author = hx8(block.key)
     return `ID: ${id}\nKEY: ${author}\nBDY: ${body}`
@@ -21,36 +32,53 @@ async function inspect (repo, opts = {}) {
   // Generate head nodes
   for (const h of heads) {
     const id = hx8(h.key)
-    const label = `Head \n${hx8(h.key)}`
-    const c = colors.head || 'lightblue3'
-    nodes += `"H${id}"[fillcolor=${c},label="${label}"];\n`
-    edges += `"H${id}" -> "B${hx8(h.value)}";\n` // link to tag to block
+    const label = `Author Head \n${hx8(h.key)}`
+    nodes += `"H${id}"
+      [
+        fontcolor="${C_BGH}",
+        color="${C_BGH}",
+        label="${label}"
+      ];\n`
+    edges += `"H${id}" -> "B${hx8(h.value)}"[arrowhead=odot];\n` // link to tag to block
     chains.push(h.value)
   }
 
   for (const t of tails) {
     const id = hx8(t.value)
-    const label = `Tail\n ${hx8(t.key)}`
-    const c = colors.tail || 'sienna'
-    nodes += `"T${id}"[fillcolor=${c},label="${label}",shape=box];\n`
+    const label = `Author Tail\n ${hx8(t.key)}`
+    nodes += `"T${id}"
+      [
+        fontcolor="${C_BGH}",
+        color="${C_BGH}",
+        label="${label}"
+      ];\n`
     // edges += `"T${id}" -> "B${id}";\n` // link to tag to block
-    edges += `"B${id}" -> "T${id}"[dir=back];\n` // genesis links to tail for visual clarity.
+    edges += `"B${id}" -> "T${id}"[dir=back,arrowtail=odot];\n` // genesis links to tail for visual clarity.
   }
 
   for (const l of latest) {
     const id = hx8(l.value)
     const label = `Latest\n ${hx8(l.key)}`
-    const c = colors.latest || 'seagreen'
-    nodes += `"L${id}"[fillcolor=${c},label="${label}",shape=box];\n`
-    edges += `"L${id}" -> "B${id}";\n` // link to tag to block
+    nodes += `"L${id}"
+      [
+        fontcolor="${C_BGL}",
+        color="${C_BGL}",
+        label="${label}"
+      ];\n`
+    edges += `"L${id}" -> "B${id}"[arrowhead=odot];\n` // link to tag to block
   }
 
   for (const f of feeds) {
     const id = hx8(f.key)
-    const label = `FeedTail\n${hx8(f.value)}`
-    const c = colors.feed || 'mediumvioletred'
-    nodes += `"F${id}"[fillcolor=${c},label="${label}",shape=box];\n`
-    edges += `"F${id}" -> "B${id}"[dir=back];\n` // link to tag to block
+    const label = `Chain Tail\n${hx8(f.value)}`
+    nodes += `"F${id}"
+      [
+        fontcolor="${C_BGC}",
+        color="${C_BGC}",
+        label="${label}"
+      ];\n`
+    // edges += `"F${id}" -> "B${id}"[dir=back];\n` // link to tag to block
+    edges += `"B${hx8(f.value)}" -> "F${id}"[dir=back,arrowtail=odot];\n` // link to tag to block
     if (!chains.find(c => c.equals(f.key))) {
       chains.push(f.key)
       orphaned.push(f.key)
@@ -59,10 +87,14 @@ async function inspect (repo, opts = {}) {
 
   for (const f of feedHeads) {
     const id = hx8(f.key)
-    const label = `FeedHead\n${hx8(f.key)}`
-    const c = colors.feed || 'mediumvioletred'
-    nodes += `"FT${id}"[fillcolor=${c},label="${label}",shape=box];\n`
-    edges += `"FT${id}" -> "B${hx8(f.value)}";\n` // link to tag to block
+    const label = `Chain Head\n${hx8(f.key)}`
+    nodes += `"FT${id}"
+      [
+        fontcolor="${C_BGC}",
+        color="${C_BGC}",
+        label="${label}"
+      ];\n`
+    edges += `"FT${id}" -> "B${hx8(f.value)}"[arrowhead=odot];\n` // link to tag to block
   }
 
   let nChains = 0
@@ -80,22 +112,39 @@ async function inspect (repo, opts = {}) {
       nBytesContent += block.size
 
       const id = hx8(block.sig)
-      const label = makeBlockLabel(block)
+      const label = makeBlockLabel(block, {
+        link (blockId, dotOpts = `style=dashed,weight=0.1,color="${C_P}"`) {
+          if (!Buffer.isBuffer(blockId)) throw new Error('link(id) expected id to be Buffer')
+          edges += `"B${id}" -> "B${hx8(blockId)}"[${dotOpts}];\n` // Link to parent
+        }
+      })
       const c = !isOrphan
-        ? colors.block || 'seashell'
-        : colors.orphanBlock || 'gray80'
-      nodes += `"B${id}"[fillcolor=${c},label="${label}",shape="square"];\n`
+        ? colors.block || C_FG
+        : colors.orphanBlock || C_BGO
+      nodes += `"B${id}"
+        [
+          fontcolor="${c}",
+          color="${c}"
+          shape="square",
+          label="${label}"
+        ];\n`
       if (!block.isGenesis) {
-        edges += `"B${id}" -> "B${hx8(block.parentSig)}";\n` // Link to parent
+        edges += `"B${id}" -> "B${hx8(block.parentSig)}"
+          [
+            color="${C_FG2}",
+            fillcolor="${C_FG}",
+            weight=1.0
+          ];\n` // Link to parent
       }
     }
   }
   const label = opts.label ||
-    `[PicoRepo] Authors: ${latest.length} Feeds: ${nChains}, Blocks: ${nBlocks}, Bytes: ${nBytes} (${nBytesContent})`
+    `[PicoRepo] Authors: ${latest.length} Feeds: ${nChains}, Blocks: ${nBlocks}, Bytes: ${bs(nBytes)} (${bs(nBytes - nBytesContent)} ${(100 * (nBytes - nBytesContent) / nBytes).toFixed(2)}%)`
   const graph = `
     digraph G {
-      graph [fontname="fixed",overlap="false",center="1",ratio="compress",label="${label}",rankdir=BT];
-      node [style=filled,fillcolor=white,shape="circle"];
+      graph [pad=0.2,labelloc="t",fontcolor="${C_FG}",bgcolor="${C_BG}",fontname="fixed",overlap="false",center="1",ratio="compress",label="${label}",rankdir=BT];
+      edge [color="black",fillcolor="${C_BG2}",weight=2.0];
+      node [style=filled,fillcolor="${C_BG2}",color="${C_FG2}",shape="rect",fontcolor="${C_FG}",shape=box];
     ${nodes}
     ${edges}
     }
@@ -115,4 +164,17 @@ async function dump (repo, filename = 'repo.dot', opts = {}) {
 module.exports = {
   inspect,
   dump
+}
+
+// Borrowed from https://github.com/mafintosh/tiny-byte-size/blob/master/index.js
+function bs (bytes, space = false) {
+  const b = bytes < 0 ? -bytes : bytes
+  if (b < 1e3) return fmt(bytes, 'B')
+  if (b < 1e6) return fmt(bytes / 1e3, 'kB')
+  if (b < 1e9) return fmt(bytes / 1e6, 'MB')
+  return fmt(bytes / 1e9, 'GB')
+  function fmt (n, u) {
+    n = Math.round(10 * n) / 10
+    return n + (space ? ' ' : '') + u
+  }
 }
