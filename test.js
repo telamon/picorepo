@@ -293,7 +293,6 @@ test.only('Experimental: detached mode supports rollback()', async t => {
   // Rollback uses CHAIN_ID when detached active
   const chainA = feedA.first.sig
   const chainB = feedB.first.sig
-  console.log('A: ', chainA.hexSlice(0, 3), 'B: ', chainB.hexSlice(0, 3))
   // Partial rollback
   const blockTwo = feedA.get(1)
   await repo.rollback(chainA, blockTwo.sig)
@@ -307,9 +306,10 @@ test.only('Experimental: detached mode supports rollback()', async t => {
     await repo.resolveFeed(feedB.first.sig)
     t.fail('Expected FeedNotFound error')
   } catch (e) { t.equal(e.message, 'FeedNotFound') }
-  await require('./dot').dump(repo, 'test.dot', {
+
+  /* await require('./dot').dump(repo, 'test.dot', {
     blockLabel: b => `${b.sig.hexSlice(0, 6)}\n${b.body.toString()}`
-  })
+  }) */
 })
 
 test('repo.resolveFeed(sig) returns entire feed', async t => {
