@@ -269,6 +269,49 @@ test('Experimental: author can create multiple feeds', async t => {
   // t.equals(tail.hexSlice(), feedA.first.sig.hexSlice(), 'Tail not moved')
 })
 
+test.only('Experimental: detached mode supports rollback()', async t => {
+  const repo = new Repo(DB())
+  repo.allowDetached = true
+  const { sk } = Feed.signPair()
+  const feedA = new Feed()
+  feedA.append('A0 Hello', sk)
+  feedA.append('A1 World', sk)
+  await repo.merge(feedA)
+
+  const feedB = new Feed()
+  feedB.append('A2 Cyborg', sk)
+  feedB.append('A3 Cool', sk)
+
+  let written = await repo.merge(feedB)
+  t.equal(written, 2, 'second feed persisted')
+
+  feedA.append('A4: of', sk)
+  feedA.append('A5: Hackers', sk)
+
+  written = await repo.merge(feedA)
+  t.equal(written, 2, 'first feed updated')
+  // Rollback uses CHAIN_ID when detached active
+  const chainA = feedA.first.sig
+  const chainB = feedB.first.sig
+  console.log('A: ', chainA.hexSlice(0, 3), 'B: ', chainB.hexSlice(0, 3))
+  // Partial rollback
+  const blockTwo = feedA.get(1)
+  await repo.rollback(chainA, blockTwo.sig)
+
+  const outA = await repo.resolveFeed(feedA.first.sig)
+  t.equal(outA.last.body.toString(), 'A1 World')
+
+  // Full feed removal
+  await repo.rollback(chainB)
+  try {
+    await repo.resolveFeed(feedB.first.sig)
+    t.fail('Expected FeedNotFound error')
+  } catch (e) { t.equal(e.message, 'FeedNotFound') }
+  await require('./dot').dump(repo, 'test.dot', {
+    blockLabel: b => `${b.sig.hexSlice(0, 6)}\n${b.body.toString()}`
+  })
+})
+
 test('repo.resolveFeed(sig) returns entire feed', async t => {
   const repo = new Repo(DB())
   const { pk, sk } = Feed.signPair()
@@ -306,7 +349,7 @@ test('resolveFeed() fast-tracks tip-pointers correctly', async t => {
   t.equal(f.length, b.length, 'Full chain loaded')
 })
 
-test.only('Dot graph should be customizable', async t => {
+test('Dot graph should be customizable', async t => {
   const enc = JSON.stringify
   const repo = new Repo(DB())
   repo.allowDetached = true
@@ -365,7 +408,7 @@ test.only('Dot graph should be customizable', async t => {
     }
   })
   t.ok(dot)
-  require('fs').writeFileSync('test.dot', dot)
+  // require('fs').writeFileSync('test.dot', dot)
 })
 
 // nice this is a useful hack for multiline strings

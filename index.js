@@ -132,6 +132,9 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
 
   /**
    * Returns entire feed given a blockId of the set.
+   * ( Different from loadFeed(ptr) as loadFeed just dumbly loads backwards
+   * until stop hit. resolveFeed(ptr) uses the CHAIN indices
+   * to fetch full chain
    */
   async resolveFeed (sig, stopCallback = undefined) {
     // O-1 constant lookup via TAIL tag
@@ -144,7 +147,7 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
       if (!block.isGenesis) continue
       tip = await this._getTag(CHAIN_HEAD, block.sig)
     }
-    if (!tip) throw new Error('Unknown feed')
+    if (!tip) throw new Error('FeedNotFound')
     return this.loadFeed(tip, stopCallback)
   }
 
@@ -303,9 +306,15 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     }
   }
 
+  /**
+   * If allowDetached is true this method expects CHAIN pointers
+   * instead of AUTHOR/HEAD pointers.
+   */
   async rollback (head, ptr) {
     let stopHit = false
-    const evicted = await this.loadHead(head, (block, abort) => {
+    const loader = !this.allowDetached ? this.loadHead : this.resolveFeed
+
+    const evicted = await loader.bind(this)(head, (block, abort) => {
       if (ptr && block.sig.equals(ptr)) {
         stopHit = true
         abort()
@@ -332,6 +341,7 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
      * Latest tags are not used atm. maybe let's just relocate them to
      * their respective heads after rollback, it's not correct but
      * better than nothing.
+     * Maybe deprecate @latest in 1.7stack release
      */
     /*
     const newTags = []
@@ -348,19 +358,31 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     } */
 
     const isFeedPurged = evicted.first.isGenesis
-
-    // Clean up tail tag on full eviction
-    if (isFeedPurged) {
+    // Clean up author-tail tag on full eviction
+    if (isFeedPurged && !this.allowDetached) {
       batch.push({ type: 'del', key: mkKey(TAIL, head) })
+    } else if (isFeedPurged) { // Remove dangling AuthorTails (useless)
+      const k = evicted.first.key
+      const currentTail = await this._getTailPtr(k)
+      if (currentTail?.equals(evicted.first.sig)) {
+        batch.push({ type: 'del', key: mkKey(TAIL, k) })
+      }
+      // TODO: relocate to other chain of same author
     }
 
-    // -- Adjust new head
-    batch.push({ type: 'del', key: mkKey(HEAD, head) })
-    if (ptr) { // Partial Rollback, part of feed still exists
-      batch.push({ type: 'put', key: mkKey(HEAD, head), value: ptr })
-    } else if (!isFeedPurged) {
-      // Middle segment of a feed was left in repo, supporting this might be bad.
-      batch.push({ type: 'put', key: mkKey(HEAD, head), value: evicted.first.parentSig })
+    // -- Adjust new head (heads roll unconditionally)
+    if (!this.allowDetached) {
+      batch.push({ type: 'del', key: mkKey(HEAD, head) })
+      if (!isFeedPurged) { // Partial Rollback, part of feed still exists
+        batch.push({ type: 'put', key: mkKey(HEAD, head), value: ptr })
+      }
+    } else { // remove dangling AuthorHeads
+      const k = evicted.first.key
+      const currentHead = await this._getHeadPtr(k)
+      if (currentHead?.equals(evicted.last.sig)) {
+        batch.push({ type: 'del', key: mkKey(HEAD, k) })
+      }
+      // TODO: relocate to other chain of same author
     }
 
     // Relocated chain-identifiers

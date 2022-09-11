@@ -7,7 +7,7 @@ const C_BGC = '#db797b' // rust
 const C_BGL = '#9ab278' // leaf
 const C_BGO = '#73a8a2' // sky/sea
 const C_P = '#d08c6d' // copper
-const C_Y = '#cbaf78' // ochre
+// const C_Y = '#cbaf78' // ochre
 
 async function inspect (repo, opts = {}) {
   const heads = await repo.listHeads()
@@ -32,7 +32,7 @@ async function inspect (repo, opts = {}) {
   // Generate head nodes
   for (const h of heads) {
     const id = hx8(h.key)
-    const label = `Author Head \n${hx8(h.key)}`
+    const label = `@author HEAD\n${hx8(h.key)}`
     nodes += `"H${id}"
       [
         fontcolor="${C_BGH}",
@@ -45,7 +45,7 @@ async function inspect (repo, opts = {}) {
 
   for (const t of tails) {
     const id = hx8(t.value)
-    const label = `Author Tail\n ${hx8(t.key)}`
+    const label = `@author TAIL\n ${hx8(t.key)}`
     nodes += `"T${id}"
       [
         fontcolor="${C_BGH}",
@@ -58,7 +58,7 @@ async function inspect (repo, opts = {}) {
 
   for (const l of latest) {
     const id = hx8(l.value)
-    const label = `Latest\n ${hx8(l.key)}`
+    const label = `@latest\n ${hx8(l.key)}`
     nodes += `"L${id}"
       [
         fontcolor="${C_BGL}",
@@ -70,7 +70,7 @@ async function inspect (repo, opts = {}) {
 
   for (const f of feeds) {
     const id = hx8(f.key)
-    const label = `Chain Tail\n${hx8(f.value)}`
+    const label = `@chain TAIL\n${hx8(f.value)}`
     nodes += `"F${id}"
       [
         fontcolor="${C_BGC}",
@@ -87,7 +87,7 @@ async function inspect (repo, opts = {}) {
 
   for (const f of feedHeads) {
     const id = hx8(f.key)
-    const label = `Chain Head\n${hx8(f.key)}`
+    const label = `@chain HEAD\n${hx8(f.key)}`
     nodes += `"FT${id}"
       [
         fontcolor="${C_BGC}",
