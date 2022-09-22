@@ -51,13 +51,13 @@ To avoid brain-leakage I've added a tool that renders dot-files to
 easier inspect which blocks are stored and where their tags are located.
 
 ```js
-const { dump, inspect } = require('picorepo/dot')
+const { inspect } = require('picorepo/dot')
 
 // generate graph as string (browser)
 const dotString = await inspect(repo)
 
 // generate string and dump as file (node)
-await dump(repo, 'repo.dot')
+require('fs').writeFileSync('repo.dot', dotString)
 ```
 
 ```bash

@@ -156,14 +156,17 @@ async function inspect (repo, opts = {}) {
   }
 }
 
+// TODO: remove, causes more issue with build
+// tools than intended
+/*
 async function dump (repo, filename = 'repo.dot', opts = {}) {
   const dot = await inspect(repo, opts)
   require('fs').writeFileSync(filename, dot)
 }
+*/
 
 module.exports = {
-  inspect,
-  dump
+  inspect
 }
 
 // Borrowed from https://github.com/mafintosh/tiny-byte-size/blob/master/index.js

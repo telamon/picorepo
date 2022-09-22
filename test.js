@@ -269,7 +269,7 @@ test('Experimental: author can create multiple feeds', async t => {
   // t.equals(tail.hexSlice(), feedA.first.sig.hexSlice(), 'Tail not moved')
 })
 
-test.only('Experimental: detached mode supports rollback()', async t => {
+test('Experimental: detached mode supports rollback()', async t => {
   const repo = new Repo(DB())
   repo.allowDetached = true
   const { sk } = Feed.signPair()
