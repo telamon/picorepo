@@ -9,6 +9,7 @@
  */
 import {
   Feed,
+  Block,
   feedFrom,
   toU8,
   u8n,
@@ -41,7 +42,7 @@ function mkKey (type, key) {
   return buffer
 }
 
-export default class Repo {
+export class Repo {
   static isRepo (o) { return o && o[REPO_SYMBOL] }
 
   constructor (db, strategy = []) {
@@ -94,7 +95,11 @@ export default class Repo {
   async writeBlock (block) {
     const key = mkKey(BLOCK, block.sig)
     // TODO: this method used to return false when block exists
-    const buffer = feedFrom(block).buffer
+    const buffer = u8n(32 + block.blockSize)
+
+    cpy(buffer, block.key)
+    cpy(buffer, block.buffer, 32)
+
     const batch = []
     batch.push({ type: 'put', key, value: buffer })
 
@@ -120,7 +125,11 @@ export default class Repo {
       .catch(err => {
         if (!err.notFound) throw err
       })
-    if (buffer) return feedFrom(buffer).last
+    if (buffer) {
+      const b = new Block(buffer, 32)
+      b._pk = buffer.subarray(0, 32) // Don't re-verify previously stored blocks
+      return b
+    }
   }
 
   // Internal because it performs a full block read, use with care.
@@ -299,7 +308,6 @@ export default class Repo {
       // Break loop to stop the chainloader
       if (abortAfter || abort) break
     }
-
     // Reconstruct feed from blocks
     const feed = feedFrom(pending)
     if (feed.length) return feed

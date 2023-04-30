@@ -3,7 +3,7 @@ import { webcrypto } from 'node:crypto'
 import { test } from 'brittle'
 import { Feed, cmp, b2h, h2b, getPublicKey, b2s } from 'picofeed'
 import { MemoryLevel } from 'memory-level'
-import Repo from './index.js'
+import { Repo } from './index.js'
 if (!globalThis.crypto) globalThis.crypto = webcrypto // shim for test.js and node processes
 // const { dump } = require('./dot')
 const DB = () => new MemoryLevel({

@@ -1,47 +1,53 @@
-[`pure | 📦`](https://github.com/telamon/create-pure)
 [`code style | standard`](https://standardjs.com/)
-# picorepo
+```
+ _ . _ _ ._   _  _
+|_)|(_(_)|(/_|_)(_)
+|            |
+```
 
 > Block storage
 
-This module is part of [picostack](https://github.com/telamon/picostack)
+The repo is part of [picostack](https://github.com/telamon/picostack)
 
 This is a low-level blockstore for [picofeeds](https://github.com/telamon/picofeed/) that stores consistent chains using a fast access scheme.
 
 - uses [abstract-leveldown](https://www.npmjs.com/package/abstract-level) for storage backends
 
-## Use (OUTDATED!)
+
+[Discord](https://discord.gg/8RMRUPZ9RS)
+
+## Use
 
 ```bash
 $ npm install picorepo levelup memdown
 ```
 
 ```js
-const PicoRepo = require('picorepo')
-const PicoFeed = require('picofeed')
-const database = levelup(memdown()) // Or leveljs/IndexedDB, read "levelup" docs
+import { Repo } from 'picorepo'
+import { Feed } from 'picofeed'
 
-const repo = new PicoRepo(database)
+const db = new MemoryLevel('pico', {
+  keyEncoding: 'buffer',
+  valueEncoding: 'buffer'
+})
+
+const repo = new Repo(db)
 
 // Generate an crypto identity consisting of a public and secret key
 const { pk, sk } = Feed.signPair()
 
-// Example dummy feed
-const chain = new PicoFeed()
-chain.append('Hello', sk)
-chain.append('World', sk)
-chain.append('Of', sk)
-chain.append('Blockchains', sk)
-chain.append('And', sk)
-chain.append('Beliefsystems', sk)
-chain.inspect() // console-logs contents
+const feed = new PicoFeed()
+feed.append('Alpha', sk)
+feed.append('Beta', sk)
+feed.append('Gamma', sk)
 
-// Persist feed to cold-storage
-const numberAccepted = await repo.merge(chain) // => 6 (blocks)
+const numberAccepted = await repo.merge(feed) // => 3 blocks
 
-// Retrieve the feed using the public-key
-const restored = await repo.loadHead(pk)
-restored.inspect() // => logs same contents
+// Retrieve feed by Author
+const alt1 = await repo.loadHead(pk)
+
+// Retrive feed by block-signature
+const alt2 = await repo.resolveFeed(feed.first.sig)
 ```
 
 ## Graphviz support
@@ -50,13 +56,14 @@ To avoid brain-leakage I've added a tool that renders dot-files to
 easier inspect which blocks are stored and where their tags are located.
 
 ```js
-const { inspect } = require('picorepo/dot')
+import { writeFileSync } from 'node:fs'
+import { inspect } from 'picorepo/dot'
 
-// generate graph as string (browser)
+// generate graph as string
 const dotString = await inspect(repo)
 
-// generate string and dump as file (node)
-require('fs').writeFileSync('repo.dot', dotString)
+// dump as file
+writeFileSync('repo.dot', dotString)
 ```
 
 ```bash
@@ -67,29 +74,6 @@ xdot repo.dot
 dot -Gcenter="true" -Gsize="8,8\!" -Gdpi=100 -Kdot -Tpng -O *.dot
 ```
 ![dag](./repo.dot.png)
-
-## Ad
-
-```ad
-|  __ \   Help Wanted!     | | | |         | |
-| |  | | ___  ___ ___ _ __ | |_| |     __ _| |__  ___   ___  ___
-| |  | |/ _ \/ __/ _ \ '_ \| __| |    / _` | '_ \/ __| / __|/ _ \
-| |__| |  __/ (_|  __/ | | | |_| |___| (_| | |_) \__ \_\__ \  __/
-|_____/ \___|\___\___|_| |_|\__|______\__,_|_.__/|___(_)___/\___|
-
-If you're reading this it means that the docs are missing or in a bad state.
-
-Writing and maintaining friendly and useful documentation takes
-effort and time.
-
-  __How_to_Help____________________________________.
- |                                                 |
- |  - Open an issue if you have questions!         |
- |  - Star this repo if you found it interesting   |
- |  - Fork off & help document <3                  |
- |  - Say Hi! :) https://discord.gg/8RMRUPZ9RS     |
- |.________________________________________________|
-```
 
 ## Changelog
 ### 2.0.0 2023-04-30
