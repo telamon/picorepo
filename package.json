@@ -1,6 +1,6 @@
 {
   "name": "picorepo",
-  "version": "1.4.5",
+  "version": "2.0.0",
   "description": "Persistent efficient binary block storage for picofeeds",
   "files": [
     "index.js",
@@ -12,7 +12,7 @@
     "test": "brittle test.js",
     "cov": "c8 --check-coverage --lines=100 node test.js",
     "debug": "node inspect $(npm bin)/brittle test.js",
-    "prepublishOnly": "standard && npm run cov"
+    "prepublishOnly": "standard && npm test"
   },
   "repository": {
     "type": "git",
