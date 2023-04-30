@@ -310,6 +310,7 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
   /**
    * If allowDetached is true this method expects CHAIN pointers
    * instead of AUTHOR/HEAD pointers.
+   * @return A feed containing all blocks that were evicted or null if nothing was removed
    */
   async rollback (head, ptr) {
     let stopHit = false
@@ -322,6 +323,7 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
       }
     })
     if (ptr && !stopHit) throw new Error('ReferenceNotFound')
+    if (!evicted) return null
 
     const batch = []
     const relocate = []

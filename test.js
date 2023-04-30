@@ -206,6 +206,25 @@ test('repo.rollback(head, ptr)', async t => {
   }
 })
 
+test('regression: repo.rollback(head)', async t => {
+  const repo = new Repo(DB())
+  const { pk, sk } = Feed.signPair()
+  let evicted = await repo.rollback(pk) // Nothing to unmerge
+  t.equal(evicted, null, 'Nothing evicted')
+  const feed = new Feed()
+  feed.append('0: Hello', sk)
+  await repo.merge(feed)
+  evicted = await repo.rollback(pk) // undo merge, delete
+  t.ok(evicted.first.sig.equals(feed.first.sig), 'initial block evicted')
+
+  feed.truncate(0)
+  feed.append('1: world', sk)
+  const sig = feed.first.sig
+  await repo.merge(feed)
+  const ptr = await repo.headOf(pk)
+  t.ok(sig.equals(ptr), 'latest head ptr to correct block')
+})
+
 test('Each head has a tag referencing the genesis', async t => {
   const repo = new Repo(DB())
   const { pk, sk } = Feed.signPair()
