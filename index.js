@@ -15,11 +15,12 @@ import {
   u8n,
   cpy,
   cmp,
-  b2h
+  b2h,
+  usize
 } from 'picofeed'
-
 const REPO_SYMBOL = Symbol.for('PicoRepo')
-
+/** @typedef {(block: Block, self: Repo) => boolean|Promise<boolean>} MergeStrategy */
+/** @typedef {import('picofeed').SignatureBin} SignatureBin */
 // Namespaces
 const HEAD = 0 // Feed end tag by Author PK
 const BLOCK = 1 // Block contents
@@ -31,7 +32,7 @@ const REG = 4 // misc application namespace/userland
 const CHAIN_TAIL = 5 // Feed start tag by GenesisBlock Signature
 const CHAIN_HEAD = 6 // Feed end tag inverse index of CHAIN_TAIL
 
-export function isBuffer (b) { return b instanceof ArrayBuffer || ArrayBuffer.isView(b) }
+// export function isBuffer (b) { return b instanceof ArrayBuffer || ArrayBuffer.isView(b) }
 
 function mkKey (type, key) {
   key = toU8(key)
@@ -43,8 +44,14 @@ function mkKey (type, key) {
 }
 
 export class Repo {
+  /** @type {(o: *) => o is Repo} */
   static isRepo (o) { return o && o[REPO_SYMBOL] }
 
+  /**
+   *
+   * @param {import('abstract-level').AbstractLevel<Uint8Array,Uint8Array,Uint8Array>} db Abstract Leveldown adapter
+   * @param {MergeStrategy|Array<MergeStrategy>} strategy
+   */
   constructor (db, strategy = []) {
     this[REPO_SYMBOL] = true
     this._db = db
@@ -92,6 +99,11 @@ export class Repo {
 
   async _getChainPtr (name) { return this._getTag(CHAIN_TAIL, name) }
 
+  /**
+   * Stores a block in repository and updates internal references.
+   * @param {Block} block
+   * @returns {Promise<boolean>}
+   */
   async writeBlock (block) {
     const key = mkKey(BLOCK, block.sig)
     // TODO: this method used to return false when block exists
@@ -119,6 +131,11 @@ export class Repo {
     return true
   }
 
+  /**
+   * Read block by signature
+   * @param {SignatureBin} id Block Signature
+   * @returns {Promise<Block|undefined>} requested block if exists
+   */
   async readBlock (id) {
     const key = mkKey(BLOCK, id)
     const buffer = await this._db.get(key)
@@ -156,6 +173,7 @@ export class Repo {
    * ( Different from loadFeed(ptr) as loadFeed just dumbly loads backwards
    * until stop hit. resolveFeed(ptr) uses the CHAIN indices
    * to fetch full chain
+   * @param {SignatureBin} sig
    */
   async resolveFeed (sig, stopCallback = undefined) {
     // O-1 constant lookup via TAIL tag
@@ -172,8 +190,26 @@ export class Repo {
     return this.loadFeed(tip, stopCallback)
   }
 
+  /**
+   * Attempts to merge the feed into the repository.
+   * If a new 'chain' will be stored or an existing 'chain' extended
+   * depends on this._allowDetached set to false.
+   * Then each chain is tracked by Author.
+   * (One chain per user.)
+   *
+   * When this._allowDetached is set to true
+   * then each chain is tracked by block-id/sig of genesis block.
+   *
+   * ## Merge Strategy
+   * The default strategy is to allow only same-key to extend a chain.
+   * Provide a custom strategy callback to enable chains with multiple-authors.
+   *
+   * @param {Feed|Block|ArrayBuffer|Uint8Array|Array<Block>} feed
+   * @param {MergeStrategy} strategy Callback, can be async, return true to merge or false to reject.
+   * @returns {Promise<number>} Blocks written
+   */
   async merge (feed, strategy) { // or merge() ?
-    if (!Feed.isFeed(feed)) feed = Feed.from(feed)
+    if (!Feed.isFeed(feed)) feed = feedFrom(feed)
     if (!feed.length) return 0
     let blocksWritten = 0
     let owner = null
@@ -206,7 +242,7 @@ export class Repo {
       }
 
       // skip ahead when previous head points to parent of new block
-      if (head.equals(block.psig)) {
+      if (cmp(head, block.psig)) {
         await bumpHead()
         continue
       }
@@ -230,7 +266,7 @@ export class Repo {
       // Fast-forward when previous head is an ancestor
       let isAncestor = false
       for await (const parentBlock of this._chainLoad(block.psig)) {
-        if (head.equals(parentBlock.sig)) {
+        if (cmp(head, parentBlock.sig)) {
           isAncestor = true
           break // break inner _chainLoad loop
         }
@@ -254,9 +290,7 @@ export class Repo {
   async _queryUserStrategy (block, inlineStrategy) {
     for (const strategy of [inlineStrategy, ...this._strategies]) {
       if (!strategy) continue
-      const p = strategy(block, this)
-      if (typeof p.then !== 'function') throw new Error('PromiseExpected')
-      if (await p) {
+      if (await strategy(block, this)) {
         return true
       }
     }
@@ -264,7 +298,8 @@ export class Repo {
   }
 
   /**
-   * Loads feed from pubkey's personal feed
+   * Loads feed where Author produced first block.
+   * @param {import('picofeed').PublicKey} key Author Key
    */
   async loadHead (key, stopCallback = undefined) {
     const head = await this._getHeadPtr(key)
@@ -272,16 +307,23 @@ export class Repo {
   }
 
   /**
-   * Loads feed from pubkey's latest block and backwards
+   * Loads feed where Author produced last block.
+   * @param {import('picofeed').PublicKey} key Author Key
    */
   async loadLatest (key, stopCallback = undefined) {
     const head = await this._getLatestPtr(key)
     if (head) return this.loadFeed(head, stopCallback)
   }
-
+  /** @typedef {(block: Block, stop: (after: boolean) => void) => void} StopCallback */
+  /**
+   * Loads a feed from BlockID and backwards
+   * @param {SignatureBin} ptr Block id
+   * @param {StopCallback|number|undefined} stopCallback load N blocks if number provided
+   * @returns {Promise<Feed|undefined>} Loaded feed
+   */
   async loadFeed (ptr, stopCallback = undefined) {
     let limit = 0
-    if (Number.isInteger(stopCallback) && stopCallback > 0) limit = stopCallback
+    if (usize(stopCallback)) limit = stopCallback
     if (limit) stopCallback = (_, after) => !--limit && after(true)
     const pending = []
     for await (const block of this._chainLoad(ptr)) {
@@ -329,7 +371,9 @@ export class Repo {
   /**
    * If allowDetached is true this method expects CHAIN pointers
    * instead of AUTHOR/HEAD pointers.
-   * @return A feed containing all blocks that were evicted or null if nothing was removed
+   * @param {Uint8Array} head Block Signature or Author's PublicKey
+   * @param {SignatureBin} ptr Stop at block signature
+   * @return {Promise<Feed?>} A feed containing all blocks that were evicted or null if nothing was removed
    */
   async rollback (head, ptr) {
     let stopHit = false
@@ -386,7 +430,7 @@ export class Repo {
     } else if (isFeedPurged) { // Remove dangling AuthorTails (useless)
       const k = evicted.first.key
       const currentTail = await this._getTailPtr(k)
-      if (currentTail?.equals(evicted.first.sig)) {
+      if (currentTail && cmp(currentTail, evicted.first.sig)) {
         batch.push({ type: 'del', key: mkKey(TAIL, k) })
       }
       // TODO: relocate to other chain of same author
@@ -401,7 +445,7 @@ export class Repo {
     } else { // remove dangling AuthorHeads
       const k = evicted.first.key
       const currentHead = await this._getHeadPtr(k)
-      if (currentHead?.equals(evicted.last.sig)) {
+      if (currentHead && cmp(currentHead, evicted.last.sig)) {
         batch.push({ type: 'del', key: mkKey(HEAD, k) })
       }
       // TODO: relocate to other chain of same author
@@ -470,13 +514,13 @@ export class Repo {
   */
 
   async writeReg (key, value) {
-    const bkey = mkKey(REG, Buffer.from(key))
-    await this._db.put(bkey, Buffer.from(value))
+    const bkey = mkKey(REG, key)
+    await this._db.put(bkey, value)
     return true
   }
 
   async readReg (key) {
-    const bkey = mkKey(REG, Buffer.from(key))
+    const bkey = mkKey(REG, key)
     const value = await this._db.get(bkey)
       .catch(err => {
         if (!err.notFound) throw err
@@ -486,22 +530,22 @@ export class Repo {
 
   async listHeads () {
     return this._listRange({
-      gt: mkKey(HEAD, Buffer.alloc(32).fill(0)),
-      lt: mkKey(HEAD, Buffer.alloc(32).fill(0xff))
+      gt: mkKey(HEAD, u8fill(32, 0)),
+      lt: mkKey(HEAD, u8fill(32, 0xff))
     })
   }
 
   async listTails () {
     return this._listRange({
-      gt: mkKey(TAIL, Buffer.alloc(32).fill(0)),
-      lt: mkKey(TAIL, Buffer.alloc(32).fill(0xff))
+      gt: mkKey(TAIL, u8fill(32, 0)),
+      lt: mkKey(TAIL, u8fill(32, 0xff))
     })
   }
 
   async listLatest () {
     return this._listRange({
-      gt: mkKey(LATEST, Buffer.alloc(32).fill(0)),
-      lt: mkKey(LATEST, Buffer.alloc(32).fill(0xff))
+      gt: mkKey(LATEST, u8fill(32, 0)),
+      lt: mkKey(LATEST, u8fill(32, 0xff))
     })
   }
 
@@ -511,15 +555,15 @@ export class Repo {
    */
   async listFeeds () {
     return this._listRange({
-      gt: mkKey(CHAIN_TAIL, Buffer.alloc(32).fill(0)),
-      lt: mkKey(CHAIN_TAIL, Buffer.alloc(32).fill(0xff))
+      gt: mkKey(CHAIN_TAIL, u8fill(32, 0)),
+      lt: mkKey(CHAIN_TAIL, u8fill(32, 0xff))
     })
   }
 
   async listFeedHeads () {
     return this._listRange({
-      gt: mkKey(CHAIN_HEAD, Buffer.alloc(32).fill(0)),
-      lt: mkKey(CHAIN_HEAD, Buffer.alloc(32).fill(0xff))
+      gt: mkKey(CHAIN_HEAD, u8fill(32, 0)),
+      lt: mkKey(CHAIN_HEAD, u8fill(32, 0xff))
     })
   }
 
@@ -542,8 +586,15 @@ export class Repo {
       }
     }
     await new Promise((resolve, reject) => {
-      iter.close(err => err ? reject(err) : resolve())
+      iter.close(err => err ? reject(err) : resolve(true))
     })
     return result
   }
+}
+
+/** @type {(n: number, char: number|undefined) => Uint8Array} */
+function u8fill (n, char) {
+  const b = u8n(n)
+  if (typeof char !== 'undefined') for (let i = 0; i < b.length; i++) b[i] = char
+  return b
 }
