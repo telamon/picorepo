@@ -2,16 +2,15 @@
 [`code style | standard`](https://standardjs.com/)
 # picorepo
 
-> Persistent efficient binary block storage for picofeeds
+> Block storage
 
 This module is part of [picostack](https://github.com/telamon/picostack)
 
 This is a low-level blockstore for [picofeeds](https://github.com/telamon/picofeed/) that stores consistent chains using a fast access scheme.
-Uses a levelup interface for storage abstraction, works in nodejs (level-db) and in browser (IndexedDB) so besides
-adding this modules as a dependency you have to additionally add [levelup](https://github.com/Level/levelup) as a peer dep.
-Use `memdown` for "in memory" unit-tests.
 
-## Use
+- uses [abstract-leveldown](https://www.npmjs.com/package/abstract-level) for storage backends
+
+## Use (OUTDATED!)
 
 ```bash
 $ npm install picorepo levelup memdown
@@ -93,6 +92,8 @@ effort and time.
 ```
 
 ## Changelog
+### 2.0.0 2023-04-30
+- ported to picofeed v4
 
 ### 1.3.1 2022-08-02
 - added experimental mode 'allowDetached'

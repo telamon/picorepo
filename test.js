@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { webcrypto } from 'node:crypto'
 import { test } from 'brittle'
-import { Feed, cmp, b2h as b2h1, h2b, getPublicKey, b2s } from 'picofeed'
+import { Feed, cmp, b2h, h2b, getPublicKey, b2s } from 'picofeed'
 import { MemoryLevel } from 'memory-level'
 import Repo from './index.js'
-const b2h = (b, l = 0) => b2h1(l ? b.slice(0, l) : b)
 if (!globalThis.crypto) globalThis.crypto = webcrypto // shim for test.js and node processes
 // const { dump } = require('./dot')
 const DB = () => new MemoryLevel({
