@@ -21,6 +21,7 @@ import {
 const REPO_SYMBOL = Symbol.for('PicoRepo')
 /** @typedef {(block: Block, self: Repo) => boolean|Promise<boolean>} MergeStrategy */
 /** @typedef {import('picofeed').SignatureBin} SignatureBin */
+/** @typedef {import('picofeed').PublicKey} PublicKey */
 // Namespaces
 const HEAD = 0 // Feed end tag by Author PK
 const BLOCK = 1 // Block contents
@@ -299,7 +300,7 @@ export class Repo {
 
   /**
    * Loads feed where Author produced first block.
-   * @param {import('picofeed').PublicKey} key Author Key
+   * @param {PublicKey} key Author Key
    */
   async loadHead (key, stopCallback = undefined) {
     const head = await this._getHeadPtr(key)
@@ -308,12 +309,13 @@ export class Repo {
 
   /**
    * Loads feed where Author produced last block.
-   * @param {import('picofeed').PublicKey} key Author Key
+   * @param {PublicKey} key Author Key
    */
   async loadLatest (key, stopCallback = undefined) {
     const head = await this._getLatestPtr(key)
     if (head) return this.loadFeed(head, stopCallback)
   }
+
   /** @typedef {(block: Block, stop: (after: boolean) => void) => void} StopCallback */
   /**
    * Loads a feed from BlockID and backwards
@@ -371,7 +373,7 @@ export class Repo {
   /**
    * If allowDetached is true this method expects CHAIN pointers
    * instead of AUTHOR/HEAD pointers.
-   * @param {Uint8Array} head Block Signature or Author's PublicKey
+   * @param {PublicKey|SignatureBin} head Block Signature or Author's PublicKey
    * @param {SignatureBin} ptr Stop at block signature
    * @return {Promise<Feed?>} A feed containing all blocks that were evicted or null if nothing was removed
    */
