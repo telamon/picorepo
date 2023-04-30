@@ -1,7 +1,8 @@
-/* TODO: move to independent module "pico-repo" as this file was cannibalized from PoH
- * So this is going to be a persistent block-store
+/* Pico Repo(sitory)
+ * This is a persistent block-store
  * as opposed to picofeed which is an in-memory datatype,
- *
+ * @author Tony Ivanov <tony@decentlabs.se>
+ * @license AGPLv3
  */
 const Feed = require('picofeed')
 const REPO_SYMBOL = Symbol.for('PicoRepo')
