@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-const test = require('tape')
-const Feed = require('picofeed')
-const { MemoryLevel } = require('memory-level')
-const Repo = require('.')
+import { webcrypto } from 'node:crypto'
+import { test } from 'brittle'
+import { Feed, cmp, b2h as b2h1, h2b, getPublicKey, b2s } from 'picofeed'
+import { MemoryLevel } from 'memory-level'
+import Repo from './index.js'
+const b2h = (b, l = 0) => b2h1(l ? b.slice(0, l) : b)
+if (!globalThis.crypto) globalThis.crypto = webcrypto // shim for test.js and node processes
 // const { dump } = require('./dot')
 const DB = () => new MemoryLevel({
   keyEncoding: 'buffer',
@@ -10,72 +13,64 @@ const DB = () => new MemoryLevel({
 })
 
 test('PicoRepo: low-level block store', async t => {
-  try {
-    const repo = new Repo(DB())
-    const f = new Feed()
-    const { pk, sk } = Feed.signPair()
-    const author = pk
-    f.append('hello', sk)
-    const ptr = await repo._setHeadPtr(author, f.last.sig)
-    t.ok(ptr.equals(await repo._getHeadPtr(author)))
+  const repo = new Repo(DB())
+  const f = new Feed()
+  const { pk, sk } = Feed.signPair()
+  const author = pk
+  f.append('hello', sk)
+  const ptr = await repo._setHeadPtr(author, f.last.sig)
+  t.ok(cmp(ptr, await repo._getHeadPtr(author)))
 
-    const blockId = f.last.sig
+  const blockId = f.last.sig
 
-    t.ok(await repo.writeBlock(f.last))
-    // t.notOk(await repo.writeBlock(f.last)) // Not sure if want
+  t.ok(await repo.writeBlock(f.last))
+  // t.notOk(await repo.writeBlock(f.last)) // Not sure if want
 
-    const storedBlock = await repo.readBlock(blockId)
-    t.ok(f.last.buffer.equals(storedBlock.buffer))
-    t.ok(f.last.key.equals(storedBlock.key))
-  } catch (err) { t.error(err) }
-  t.end()
+  const storedBlock = await repo.readBlock(blockId)
+  t.is(f.last.buffer.length, storedBlock.buffer.length)
+  t.ok(cmp(f.last.buffer, storedBlock.buffer))
+  t.ok(cmp(f.last.key, storedBlock.key))
 })
 
 // Test linear single author fast-forward
 // bumpHead() if (new block.parentSig === currentHead)
 test('PicoRepo: store and get feed', async t => {
-  try {
-    const repo = new Repo(DB())
-    const f = new Feed()
-    const { pk, sk } = Feed.signPair()
-    f.append('Hello', sk)
-    f.append('World', sk)
-    let stored = await repo.merge(f)
-    t.equal(stored, 2)
+  const repo = new Repo(DB())
+  const f = new Feed()
+  const { pk, sk } = Feed.signPair()
+  f.append('Hello', sk)
+  f.append('World', sk)
+  let stored = await repo.merge(f)
+  t.is(stored, 2)
 
-    f.append('Slice is good', sk)
-    stored = await repo.merge(f)
-    t.equal(stored, 1)
+  f.append('Slice is good', sk)
+  stored = await repo.merge(f)
+  t.is(stored, 1)
 
-    const restored = await repo.loadHead(pk)
-    t.ok(restored)
-    t.ok(restored.last.sig.equals(f.last.sig))
-    t.equal(restored.length, f.length)
-  } catch (err) { t.error(err) }
-  t.end()
+  const restored = await repo.loadHead(pk)
+  t.ok(restored)
+  t.ok(cmp(restored.last.sig, f.last.sig))
+  t.is(restored.length, f.length)
 })
 
 // bumpHead() when currentHead is ancestor of block
 test('PicoRepo: linear multi-author fast-forward', async t => {
-  try {
-    const repo = new Repo(DB())
-    const f = new Feed()
-    const a = Feed.signPair()
-    const b = Feed.signPair()
-    f.append('A0', a.sk)
-    f.append('A1->A0', a.sk)
-    let stored = await repo.merge(f)
-    t.equal(stored, 2)
+  const repo = new Repo(DB())
+  const f = new Feed()
+  const a = Feed.signPair()
+  const b = Feed.signPair()
+  f.append('A0', a.sk)
+  f.append('A1->A0', a.sk)
+  let stored = await repo.merge(f)
+  t.is(stored, 2)
 
-    f.append('B0->A1', b.sk)
-    stored = await repo.merge(f)
-    t.equal(stored, 1)
+  f.append('B0->A1', b.sk)
+  stored = await repo.merge(f)
+  t.is(stored, 1)
 
-    f.append('A2->B0', a.sk)
-    stored = await repo.merge(f)
-    t.equal(stored, 1)
-  } catch (err) { t.error(err) }
-  t.end()
+  f.append('A2->B0', a.sk)
+  stored = await repo.merge(f)
+  t.is(stored, 1)
 })
 
 test('HeadRework; each head keeps track of own chain', async t => {
@@ -125,17 +120,16 @@ test('HeadRework; each head keeps track of own chain', async t => {
   await repo.merge(fD)
   fB.append('A6', C)
   await repo.merge(fB.slice(-1))
-  const hA = await repo.loadHead(A.slice(32))
 
-  const hB = await repo.loadHead(B.slice(32))
+  const hA = await repo.loadHead(getPublicKey(A))
+  const hB = await repo.loadHead(getPublicKey(B))
+  t.is(b2h(hA.last.sig), b2h(fA.last.sig), 'A loaded successfully')
+  t.is(b2h(hB.last.sig), b2h(fB.last.sig), 'B loaded successfully')
 
-  t.equal(hA.last.sig.hexSlice(), fA.last.sig.hexSlice(), 'A loaded successfully')
-  t.equal(hB.last.sig.hexSlice(), fB.last.sig.hexSlice(), 'B loaded successfully')
-
-  const lA = await repo.loadLatest(A.slice(32))
-  const lB = await repo.loadLatest(B.slice(32))
-  t.equal(lA.last.sig.hexSlice(), fD.get(-2).sig.hexSlice(), 'A lastWrite successfully')
-  t.equal(lB.last.sig.hexSlice(), fB.get(-2).sig.hexSlice(), 'B lastWrite successfully')
+  const lA = await repo.loadLatest(getPublicKey(A))
+  const lB = await repo.loadLatest(getPublicKey(B))
+  t.is(b2h(lA.last.sig), b2h(fD.block(-2).sig), 'A lastWrite successfully')
+  t.is(b2h(lB.last.sig), b2h(fB.block(-2).sig), 'B lastWrite successfully')
 })
 
 test('repo.rollback(head, ptr)', async t => {
@@ -151,58 +145,58 @@ test('repo.rollback(head, ptr)', async t => {
    * await repo.rollback(A, B1)
    */
   const repo = new Repo(DB(), async () => true)
-  const [A, B] = Array.from(new Array(2)).map(() => Feed.signPair().sk)
+  const [A, B] = Array.from(new Array(2)).map(() => Feed.signPair())
   const fA = new Feed()
   const fB = new Feed()
-  fA.append('A0', A)
-  fA.append('A1', A)
+  fA.append('A0', A.sk)
+  fA.append('A1', A.sk)
   // const A1 = fA.last
   await repo.merge(fA)
-  fB.append('B0', B)
+  fB.append('B0', B.sk)
   await repo.merge(fB)
-  fA.append('B1', B)
+  fA.append('B1', B.sk)
   const B1 = fA.last
-  fA.append('A2', A)
-  fA.append('A3', A)
+  fA.append('A2', A.sk)
+  fA.append('A3', A.sk)
   const A3 = fA.last
   await repo.merge(fA)
-  fB.append('B2', B)
+  fB.append('B2', B.sk)
   const B2 = fB.last
   await repo.merge(fB)
-  fA.append('B3', B)
+  fA.append('B3', B.sk)
   const B3 = fA.last
   await repo.merge(fA)
 
-  let currentA = await repo.headOf(A.slice(32))
-  let latestA = await repo.latestOf(A.slice(32))
-  let currentB = await repo.headOf(B.slice(32))
-  let latestB = await repo.latestOf(B.slice(32))
+  let currentA = await repo.headOf(A.pk)
+  let latestA = await repo.latestOf(A.pk)
+  let currentB = await repo.headOf(B.pk)
+  let latestB = await repo.latestOf(B.pk)
 
-  hexCmp(latestB, B3.sig, 'Latest B ptr equals B3')
-  hexCmp(currentB, B2.sig, 'Head B ptr equals B2')
-  hexCmp(latestA, A3.sig, 'Latest A ptr equals A3')
-  hexCmp(currentA, B3.sig, 'Head A ptr equals A3')
+  hexCmp(latestB, B3.sig, 'Latest B ptr iss B3')
+  hexCmp(currentB, B2.sig, 'Head B ptr iss B2')
+  hexCmp(latestA, A3.sig, 'Latest A ptr iss A3')
+  hexCmp(currentA, B3.sig, 'Head A ptr iss A3')
 
-  const evicted = await repo.rollback(A.slice(32), B1.sig)
-  t.equal(evicted.length, 3)
+  const evicted = await repo.rollback(A.pk, B1.sig)
+  t.is(evicted.length, 3)
   // hexCmp(evicted.first.sig, A2.sig)
   // hexCmp(evicted.last.sig, B3.sig)
 
-  currentA = await repo.headOf(A.slice(32))
-  latestA = await repo.latestOf(A.slice(32))
-  currentB = await repo.headOf(B.slice(32))
-  latestB = await repo.latestOf(B.slice(32))
+  currentA = await repo.headOf(A.pk)
+  latestA = await repo.latestOf(A.pk)
+  currentB = await repo.headOf(B.pk)
+  latestB = await repo.latestOf(B.pk)
 
-  hexCmp(currentA, B1.sig, 'Head A ptr equals B1')
-  hexCmp(currentB, B2.sig, 'Head B ptr equals B2')
+  hexCmp(currentA, B1.sig, 'Head A ptr iss B1')
+  hexCmp(currentB, B2.sig, 'Head B ptr iss B2')
 
-  t.notOk(latestA, 'tag A deleted')
-  t.notOk(latestB, 'tag B deleted')
+  t.ok(!latestA, 'tag A deleted')
+  t.ok(!latestB, 'tag B deleted')
   // TODO: latest-tags are deleted for now.
-  // hexCmp(latestB, B2.sig, 'Latest B ptr equals B2')
-  // hexCmp(latestA, A1.sig, 'Latest A ptr equals A1')
+  // hexCmp(latestB, B2.sig, 'Latest B ptr iss B2')
+  // hexCmp(latestA, A1.sig, 'Latest A ptr iss A1')
   function hexCmp (a, b, desc) {
-    return t.equal(a?.hexSlice(0, 4), b?.hexSlice(0, 4), desc)
+    return t.is(b2h(a)?.slice(0, 8), b2h(b)?.slice(0, 8), desc)
   }
 })
 
@@ -210,19 +204,19 @@ test('regression: repo.rollback(head)', async t => {
   const repo = new Repo(DB())
   const { pk, sk } = Feed.signPair()
   let evicted = await repo.rollback(pk) // Nothing to unmerge
-  t.equal(evicted, null, 'Nothing evicted')
+  t.is(evicted, null, 'Nothing evicted')
   const feed = new Feed()
   feed.append('0: Hello', sk)
   await repo.merge(feed)
   evicted = await repo.rollback(pk) // undo merge, delete
-  t.ok(evicted.first.sig.equals(feed.first.sig), 'initial block evicted')
+  t.ok(cmp(evicted.first.sig, feed.first.sig), 'initial block evicted')
 
   feed.truncate(0)
   feed.append('1: world', sk)
   const sig = feed.first.sig
   await repo.merge(feed)
   const ptr = await repo.headOf(pk)
-  t.ok(sig.equals(ptr), 'latest head ptr to correct block')
+  t.ok(cmp(sig, ptr), 'latest head ptr to correct block')
 })
 
 test('Each head has a tag referencing the genesis', async t => {
@@ -233,9 +227,9 @@ test('Each head has a tag referencing the genesis', async t => {
   feed.append('0: Hello', sk)
   await repo.merge(feed)
   let feeds = await repo.listFeeds()
-  t.equal(feeds.length, 1, 'One unique feed')
+  t.is(feeds.length, 1, 'One unique feed')
   hexCmp(feeds[0].key, feeds[0].value, 'Genesis references itself')
-  hexCmp(feed.first.sig, feeds[0].value, 'ChainId equals genesis sig')
+  hexCmp(feed.first.sig, feeds[0].value, 'ChainId iss genesis sig')
 
   feed.append('1: world', sk)
   feed.append('2: of', sk)
@@ -243,21 +237,21 @@ test('Each head has a tag referencing the genesis', async t => {
   await repo.merge(feed)
 
   feeds = await repo.listFeeds()
-  t.equal(feeds.length, 1, 'One unique feed')
+  t.is(feeds.length, 1, 'One unique feed')
 
-  hexCmp(feeds[0].key, feed.last.sig, 'key equals last block signature')
+  hexCmp(feeds[0].key, feed.last.sig, 'key iss last block signature')
   hexCmp(feeds[0].value, feed.first.sig, 'chainId is inherited')
 
-  await repo.rollback(pk, feed.get(-2).sig)
+  await repo.rollback(pk, feed.block(-2).sig)
 
   feeds = await repo.listFeeds()
-  t.equal(feeds.length, 1, 'One unique feed')
+  t.is(feeds.length, 1, 'One unique feed')
 
-  hexCmp(feeds[0].key, feed.get(-2).sig, 'tag was rolled back')
+  hexCmp(feeds[0].key, feed.block(-2).sig, 'tag was rolled back')
   hexCmp(feeds[0].value, feed.first.sig, 'chainId is inherited')
 
   function hexCmp (a, b, desc) {
-    return t.equal(a?.hexSlice(0, 4), b?.hexSlice(0, 4), desc)
+    return t.is(b2h(a)?.slice(0, 8), b2h(b)?.slice(0, 8), desc)
   }
 })
 
@@ -275,17 +269,17 @@ test('Experimental: author can create multiple feeds', async t => {
   feedB.append('A3 Cool', sk)
 
   let written = await repo.merge(feedB)
-  t.equal(written, 2, 'second feed persisted')
+  t.is(written, 2, 'second feed persisted')
 
   feedA.append('A4: of', sk)
   feedA.append('A5: Hackers', sk)
 
   written = await repo.merge(feedA)
-  t.equal(written, 2, 'first feed updated')
+  t.is(written, 2, 'first feed updated')
 
   // TODO: don't overwrite tail tag if exists.. or what?
   // const tail = await repo.tailOf(pk)
-  // t.equals(tail.hexSlice(), feedA.first.sig.hexSlice(), 'Tail not moved')
+  // t.iss(tail.hexSlice(), feedA.first.sig.hexSlice(), 'Tail not moved')
 })
 
 test('Experimental: detached mode supports rollback()', async t => {
@@ -302,29 +296,29 @@ test('Experimental: detached mode supports rollback()', async t => {
   feedB.append('A3 Cool', sk)
 
   let written = await repo.merge(feedB)
-  t.equal(written, 2, 'second feed persisted')
+  t.is(written, 2, 'second feed persisted')
 
   feedA.append('A4: of', sk)
   feedA.append('A5: Hackers', sk)
 
   written = await repo.merge(feedA)
-  t.equal(written, 2, 'first feed updated')
+  t.is(written, 2, 'first feed updated')
   // Rollback uses CHAIN_ID when detached active
   const chainA = feedA.first.sig
   const chainB = feedB.first.sig
   // Partial rollback
-  const blockTwo = feedA.get(1)
+  const blockTwo = feedA.block(1)
   await repo.rollback(chainA, blockTwo.sig)
 
   const outA = await repo.resolveFeed(feedA.first.sig)
-  t.equal(outA.last.body.toString(), 'A1 World')
+  t.is(b2s(outA.last.body), 'A1 World')
 
   // Full feed removal
   await repo.rollback(chainB)
   try {
     await repo.resolveFeed(feedB.first.sig)
     t.fail('Expected FeedNotFound error')
-  } catch (e) { t.equal(e.message, 'FeedNotFound') }
+  } catch (e) { t.is(e.message, 'FeedNotFound') }
 
   /* await require('./dot').dump(repo, 'test.dot', {
     blockLabel: b => `${b.sig.hexSlice(0, 6)}\n${b.body.toString()}`
@@ -344,16 +338,16 @@ test('repo.resolveFeed(sig) returns entire feed', async t => {
   feedA.append('6', sk)
   feedA.append('7', sk)
   await repo.merge(feedA)
-  let f = await repo.resolveFeed(feedA.get(2).sig)
-  t.equal(f.last.body.toString(), '7')
+  let f = await repo.resolveFeed(feedA.block(2).sig)
+  t.is(b2s(f.last.body), '7')
 
   // await repo.rollback(f.last.sig, f.get(-2).sig)
-  await repo.rollback(pk, f.get(-3).sig)
-  f = await repo.resolveFeed(feedA.get(2).sig)
-  t.equal(f.last.body.toString(), '5')
+  await repo.rollback(pk, f.block(-3).sig)
+  f = await repo.resolveFeed(feedA.block(2).sig)
+  t.is(b2s(f.last.body), '5')
   // await require('./dot').dump(repo, 'test.dot')
   await repo.rollback(pk)
-  t.equal((await repo.listFeeds()).length, 0, 'Empty repo')
+  t.is((await repo.listFeeds()).length, 0, 'Empty repo')
 })
 
 test('resolveFeed() fast-tracks tip-pointers correctly', async t => {
@@ -365,7 +359,7 @@ test('resolveFeed() fast-tracks tip-pointers correctly', async t => {
   f.append('1', sk)
   await repo.merge(f)
   const b = await repo.resolveFeed(f.last.sig)
-  t.equal(f.length, b.length, 'Full chain loaded')
+  t.is(f.length, b.length, 'Full chain loaded')
 })
 
 test('Dot graph should be customizable', async t => {
@@ -382,45 +376,47 @@ test('Dot graph should be customizable', async t => {
   feedB.append(enc({ name: 'Goblin', lvl: 10, hp: 30, seq: 0 }), monster1.sk)
   feedC.append(enc({ name: 'Goblin Mage', lvl: 15, hp: 29, seq: 0 }), monster2.sk)
   feedC.append(enc({ action: 'Cook dinner', seq: 1 }), monster2.sk)
-  feedB.append(enc({ action: 'Give food', ref: feedC.last.sig.hexSlice(), seq: 2 }), monster2.sk)
+  feedB.append(enc({ action: 'Give food', ref: b2h(feedC.last.sig), seq: 2 }), monster2.sk)
   feedB.append(enc({ action: 'Eat', seq: 1 }), monster1.sk)
   feedC.append(enc({ action: 'Eat', seq: 3 }), monster2.sk)
 
   feedA.append(enc({ action: 'Walk', seq: 1 }), hero.sk)
   feedA.append(enc({ action: 'Talk', seq: 2 }), hero.sk)
-  feedB.append(enc({ action: 'Attack', seq: 3, ref: feedA.last.sig.hexSlice() }), hero.sk)
+  feedB.append(enc({ action: 'Attack', seq: 3, ref: b2h(feedA.last.sig) }), hero.sk)
   feedB.append(enc({ action: 'Die', seq: 2 }), monster1.sk)
   feedC.append(enc({ action: 'Summon', seq: 4 }), monster2.sk)
   const feedS = new Feed()
   feedS.append(enc({ name: 'Skeleton', lvl: 5, hp: 100, seq: 5 }), monster2.sk)
   feedS.append(enc({ action: 'Fear Lv1', seq: 6 }), monster2.sk)
-  feedA.append(enc({ action: 'Attack', seq: 7, ref: feedS.last.sig.hexSlice() }), monster2.sk)
+  feedA.append(enc({ action: 'Attack', seq: 7, ref: b2h(feedS.last.sig) }), monster2.sk)
   feedA.append(enc({ action: 'Run Away', seq: 4 }), hero.sk)
   feedC.append(enc({ action: 'Celebrate', seq: 8 }), monster2.sk)
 
   const authors = {
-    [hero.pk.hexSlice(0, 3)]: '🤴',
-    [monster1.pk.hexSlice(0, 3)]: '🧌',
-    [monster2.pk.hexSlice(0, 3)]: '👹'
+    [hero.pk.slice(0, 6)]: '🤴',
+    [monster1.pk.slice(0, 6)]: '🧌',
+    [monster2.pk.slice(0, 6)]: '👹'
   }
   await repo.merge(feedA)
   await repo.merge(feedB)
   await repo.merge(feedC)
   await repo.merge(feedS)
-  const dot = await require('./dot').inspect(repo, {
+  const dot = await import('./dot.js')
+
+  dot.inspect(repo, {
     blockLabel (block, builder) {
-      const d = JSON.parse(block.body)
+      const d = JSON.parse(b2s(block.body))
       if (d.name) {
         return bq`
-          ${authors[block.key.hexSlice(0, 3)]}${d.seq}
+          ${authors[b2h(block.key, 3)]}${d.seq}
           ${d.name}
           LVL${d.lvl}
           HP${d.hp}
         `
       }
-      if (d.ref) builder.link(Buffer.from(d.ref, 'hex'))
+      if (d.ref) builder.link(h2b(d.ref))
       return bq`
-        ${authors[block.key.hexSlice(0, 3)]}${d.seq}
+        ${authors[b2h(block.key, 3)]}${d.seq}
         action:
         ${d.action}
       `

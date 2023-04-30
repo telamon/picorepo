@@ -1,3 +1,4 @@
+import { b2h, toU8 } from 'picofeed'
 const C_BG = '#2f383e' // graphite
 const C_BG2 = '#2c323d' // slate
 const C_FG = '#bbbba9' // cream
@@ -9,7 +10,7 @@ const C_BGO = '#73a8a2' // sky/sea
 const C_P = '#d08c6d' // copper
 // const C_Y = '#cbaf78' // ochre
 
-async function inspect (repo, opts = {}) {
+export async function inspect (repo, opts = {}) {
   const heads = await repo.listHeads()
   const tails = await repo.listTails()
   const latest = await repo.listLatest()
@@ -18,7 +19,7 @@ async function inspect (repo, opts = {}) {
 
   const colors = opts.colors || {}
   const makeBlockLabel = opts.blockLabel || (block => {
-    const body = block.body.subarray(0, 8).toString('hex')
+    const body = b2h(block.body, 8)
     const id = hx8(block.sig)
     const author = hx8(block.key)
     return `ID: ${id}\nKEY: ${author}\nBDY: ${body}`
@@ -114,7 +115,8 @@ async function inspect (repo, opts = {}) {
       const id = hx8(block.sig)
       const label = makeBlockLabel(block, {
         link (blockId, dotOpts = `style=dashed,weight=0.1,color="${C_P}"`) {
-          if (!Buffer.isBuffer(blockId)) throw new Error('link(id) expected id to be Buffer')
+          blockId = toU8(blockId)
+          // if (!Buffer.isBuffer(blockId)) throw new Error('link(id) expected id to be Buffer')
           edges += `"B${id}" -> "B${hx8(blockId)}"[${dotOpts}];\n` // Link to parent
         }
       })
@@ -128,8 +130,8 @@ async function inspect (repo, opts = {}) {
           shape="square",
           label="${label}"
         ];\n`
-      if (!block.isGenesis) {
-        edges += `"B${id}" -> "B${hx8(block.parentSig)}"
+      if (!block.genesis) {
+        edges += `"B${id}" -> "B${hx8(block.psig)}"
           [
             color="${C_FG2}",
             fillcolor="${C_FG}",
@@ -152,7 +154,7 @@ async function inspect (repo, opts = {}) {
   return graph
 
   function hx8 (buf) {
-    return buf.subarray(0, 4).toString('hex')
+    return b2h(buf.subarray(0, 4))
   }
 }
 
@@ -165,12 +167,8 @@ async function dump (repo, filename = 'repo.dot', opts = {}) {
 }
 */
 
-module.exports = {
-  inspect
-}
-
 // Borrowed from https://github.com/mafintosh/tiny-byte-size/blob/master/index.js
-function bs (bytes, space = false) {
+export function bs (bytes, space = false) {
   const b = bytes < 0 ? -bytes : bytes
   if (b < 1e3) return fmt(bytes, 'B')
   if (b < 1e6) return fmt(bytes / 1e3, 'kB')

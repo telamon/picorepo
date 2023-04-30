@@ -3,8 +3,20 @@
  * as opposed to picofeed which is an in-memory datatype,
  * @author Tony Ivanov <tony@decentlabs.se>
  * @license AGPLv3
+ *
+ * This code was written back in 2020,
+ * During Feed 4.x upgrade I realize this is due for a rewrite
  */
-const Feed = require('picofeed')
+import {
+  Feed,
+  feedFrom,
+  toU8,
+  u8n,
+  cpy,
+  cmp,
+  b2h
+} from 'picofeed'
+
 const REPO_SYMBOL = Symbol.for('PicoRepo')
 
 // Namespaces
@@ -18,15 +30,18 @@ const REG = 4 // misc application namespace/userland
 const CHAIN_TAIL = 5 // Feed start tag by GenesisBlock Signature
 const CHAIN_HEAD = 6 // Feed end tag inverse index of CHAIN_TAIL
 
+export function isBuffer (b) { return b instanceof ArrayBuffer || ArrayBuffer.isView(b) }
+
 function mkKey (type, key) {
-  if (!Buffer.isBuffer(key)) throw new Error('Expected key to be a Buffer')
-  const buffer = Buffer.alloc(1 + key.length)
-  key.copy(buffer, 1)
+  key = toU8(key)
+  // if (!isBuffer(key)) throw new Error('Expected key to be a Buffer')
+  const buffer = u8n(1 + key.length)
+  cpy(buffer, key, 1)
   buffer[0] = type
   return buffer
 }
 
-class PicoRepo { //  PicoJar (a jar for crypto-pickles)
+export default class Repo {
   static isRepo (o) { return o && o[REPO_SYMBOL] }
 
   constructor (db, strategy = []) {
@@ -79,20 +94,17 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
   async writeBlock (block) {
     const key = mkKey(BLOCK, block.sig)
     // TODO: this method used to return false when block exists
-    const buffer = Buffer.alloc(32 + block.buffer.length)
-    block.key.copy(buffer, 0)
-    block.buffer.copy(buffer, 32)
-
+    const buffer = feedFrom(block).buffer
     const batch = []
     batch.push({ type: 'put', key, value: buffer })
 
-    if (block.isGenesis) {
+    if (block.genesis) {
       batch.push({ type: 'put', key: mkKey(TAIL, block.key), value: block.sig })
       batch.push({ type: 'put', key: mkKey(CHAIN_TAIL, block.sig), value: block.sig })
       batch.push({ type: 'put', key: mkKey(CHAIN_HEAD, block.sig), value: block.sig })
     } else {
       // Move ChainID tag
-      const prevKey = mkKey(CHAIN_TAIL, block.parentSig)
+      const prevKey = mkKey(CHAIN_TAIL, block.psig)
       const chainId = await this._db.get(prevKey)
       batch.push({ type: 'del', key: prevKey })
       batch.push({ type: 'put', key: mkKey(CHAIN_TAIL, block.sig), value: chainId })
@@ -108,8 +120,7 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
       .catch(err => {
         if (!err.notFound) throw err
       })
-
-    if (buffer) return Feed.mapBlock(buffer, 32, buffer.slice(0, 32))
+    if (buffer) return feedFrom(buffer).last
   }
 
   // Internal because it performs a full block read, use with care.
@@ -124,7 +135,7 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     // I don't know.
     let n = 0
     for await (const block of this._chainLoad(sig)) {
-      if (block.isGenesis) return block.key
+      if (block.genesis) return block.key
       n++
     }
     if (n) throw new Error('Orphaned Chain')
@@ -145,7 +156,7 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
 
     // Traverse backwards to find HEAD tag
     for await (const block of this._chainLoad(sig)) {
-      if (!block.isGenesis) continue
+      if (!block.genesis) continue
       tip = await this._getTag(CHAIN_HEAD, block.sig)
     }
     if (!tip) throw new Error('FeedNotFound')
@@ -158,11 +169,11 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     let blocksWritten = 0
     let owner = null
     const first = feed.first
-    if (first.isGenesis) owner = first.key
-    else owner = await this._traceOwnerOf(first.parentSig)
+    if (first.genesis) owner = first.key
+    else owner = await this._traceOwnerOf(first.psig)
     if (!owner) throw new Error('CannotMerge: Unknown Chain')
 
-    for (const block of feed.blocks()) {
+    for (const block of feed.blocks) {
       const author = block.key
       const id = block.sig
 
@@ -186,7 +197,7 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
       }
 
       // skip ahead when previous head points to parent of new block
-      if (head.equals(block.parentSig)) {
+      if (head.equals(block.psig)) {
         await bumpHead()
         continue
       }
@@ -195,8 +206,8 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
       // intentions were good.
       if (
         this.allowDetached && (
-          block.isGenesis ||
-          await this._hasBlock(block.parentSig)
+          block.genesis ||
+          await this._hasBlock(block.psig)
         )
       ) {
         await bumpHead()
@@ -204,12 +215,12 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
       }
 
       // Abort if no verifiably common parent in repo
-      // console.debug('haveParent?: ', block.parentSig.hexSlice())
-      if (!(await this._hasBlock(block.parentSig))) break
+      // console.debug('haveParent?: ', block.psig.hexSlice())
+      if (!(await this._hasBlock(block.psig))) break
 
       // Fast-forward when previous head is an ancestor
       let isAncestor = false
-      for await (const parentBlock of this._chainLoad(block.parentSig)) {
+      for await (const parentBlock of this._chainLoad(block.psig)) {
         if (head.equals(parentBlock.sig)) {
           isAncestor = true
           break // break inner _chainLoad loop
@@ -290,7 +301,7 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     }
 
     // Reconstruct feed from blocks
-    const feed = Feed.fromBlockArray(pending)
+    const feed = feedFrom(pending)
     if (feed.length) return feed
   }
 
@@ -302,8 +313,8 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
       first = false
       if (!block) throw new Error('ParentNotFound') // broken chain, loud
       yield block
-      if (block.isGenesis) break // We've hit a genesis block
-      next = block.parentSig
+      if (block.genesis) break // We've hit a genesis block
+      next = block.psig
     }
   }
 
@@ -317,7 +328,7 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     const loader = !this.allowDetached ? this.loadHead : this.resolveFeed
 
     const evicted = await loader.bind(this)(head, (block, abort) => {
-      if (ptr && block.sig.equals(ptr)) {
+      if (ptr && cmp(block.sig, ptr)) {
         stopHit = true
         abort()
       }
@@ -329,8 +340,8 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     const relocate = []
     const latest = {}
     for (let i = evicted.length - 1; i >= 0; i--) {
-      const block = evicted.get(i)
-      const key = block.key.toString('hex')
+      const block = evicted.block(i)
+      const key = b2h(block.key)
       if (!latest[key]) latest[key] = await this._getLatestPtr(block.key)
       // detect if latest-ptr needs to be adjusted
       if (latest[key]?.equals(block.sig)) {
@@ -360,7 +371,7 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
       }
     } */
 
-    const isFeedPurged = evicted.first.isGenesis
+    const isFeedPurged = evicted.first.genesis
     // Clean up author-tail tag on full eviction
     if (isFeedPurged && !this.allowDetached) {
       batch.push({ type: 'del', key: mkKey(TAIL, head) })
@@ -397,13 +408,13 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     if (chainId && !isFeedPurged) {
       batch.push({
         type: 'put',
-        key: mkKey(CHAIN_TAIL, evicted.first.parentSig),
+        key: mkKey(CHAIN_TAIL, evicted.first.psig),
         value: chainId
       })
       batch.push({
         type: 'put',
         key: mkKey(CHAIN_HEAD, chainId),
-        value: evicted.first.parentSig
+        value: evicted.first.psig
       })
     }
 
@@ -528,5 +539,3 @@ class PicoRepo { //  PicoJar (a jar for crypto-pickles)
     return result
   }
 }
-
-module.exports = PicoRepo
