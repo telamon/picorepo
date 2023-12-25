@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { webcrypto } from 'node:crypto'
 import { test } from 'brittle'
-import { Feed, cmp, b2h, h2b, getPublicKey, b2s } from 'picofeed'
+import { Feed, cmp, toHex, fromHex, getPublicKey, b2s } from 'picofeed'
 import { MemoryLevel } from 'memory-level'
 import { Repo } from './index.js'
 if (!globalThis.crypto) globalThis.crypto = webcrypto // shim for test.js and node processes
@@ -122,13 +122,13 @@ test('HeadRework; each head keeps track of own chain', async t => {
 
   const hA = await repo.loadHead(getPublicKey(A))
   const hB = await repo.loadHead(getPublicKey(B))
-  t.is(b2h(hA.last.sig), b2h(fA.last.sig), 'A loaded successfully')
-  t.is(b2h(hB.last.sig), b2h(fB.last.sig), 'B loaded successfully')
+  t.is(toHex(hA.last.sig), toHex(fA.last.sig), 'A loaded successfully')
+  t.is(toHex(hB.last.sig), toHex(fB.last.sig), 'B loaded successfully')
 
   const lA = await repo.loadLatest(getPublicKey(A))
   const lB = await repo.loadLatest(getPublicKey(B))
-  t.is(b2h(lA.last.sig), b2h(fD.block(-2).sig), 'A lastWrite successfully')
-  t.is(b2h(lB.last.sig), b2h(fB.block(-2).sig), 'B lastWrite successfully')
+  t.is(toHex(lA.last.sig), toHex(fD.block(-2).sig), 'A lastWrite successfully')
+  t.is(toHex(lB.last.sig), toHex(fB.block(-2).sig), 'B lastWrite successfully')
 })
 
 test('repo.rollback(head, ptr)', async t => {
@@ -195,7 +195,7 @@ test('repo.rollback(head, ptr)', async t => {
   // hexCmp(latestB, B2.sig, 'Latest B ptr iss B2')
   // hexCmp(latestA, A1.sig, 'Latest A ptr iss A1')
   function hexCmp (a, b, desc) {
-    return t.is(b2h(a)?.slice(0, 8), b2h(b)?.slice(0, 8), desc)
+    return t.is(toHex(a)?.slice(0, 8), toHex(b)?.slice(0, 8), desc)
   }
 })
 
@@ -250,7 +250,7 @@ test('Each head has a tag referencing the genesis', async t => {
   hexCmp(feeds[0].value, feed.first.sig, 'chainId is inherited')
 
   function hexCmp (a, b, desc) {
-    return t.is(b2h(a)?.slice(0, 8), b2h(b)?.slice(0, 8), desc)
+    return t.is(toHex(a)?.slice(0, 8), toHex(b)?.slice(0, 8), desc)
   }
 })
 
@@ -375,19 +375,19 @@ test('Dot graph should be customizable', async t => {
   feedB.append(enc({ name: 'Goblin', lvl: 10, hp: 30, seq: 0 }), monster1.sk)
   feedC.append(enc({ name: 'Goblin Mage', lvl: 15, hp: 29, seq: 0 }), monster2.sk)
   feedC.append(enc({ action: 'Cook dinner', seq: 1 }), monster2.sk)
-  feedB.append(enc({ action: 'Give food', ref: b2h(feedC.last.sig), seq: 2 }), monster2.sk)
+  feedB.append(enc({ action: 'Give food', ref: toHex(feedC.last.sig), seq: 2 }), monster2.sk)
   feedB.append(enc({ action: 'Eat', seq: 1 }), monster1.sk)
   feedC.append(enc({ action: 'Eat', seq: 3 }), monster2.sk)
 
   feedA.append(enc({ action: 'Walk', seq: 1 }), hero.sk)
   feedA.append(enc({ action: 'Talk', seq: 2 }), hero.sk)
-  feedB.append(enc({ action: 'Attack', seq: 3, ref: b2h(feedA.last.sig) }), hero.sk)
+  feedB.append(enc({ action: 'Attack', seq: 3, ref: toHex(feedA.last.sig) }), hero.sk)
   feedB.append(enc({ action: 'Die', seq: 2 }), monster1.sk)
   feedC.append(enc({ action: 'Summon', seq: 4 }), monster2.sk)
   const feedS = new Feed()
   feedS.append(enc({ name: 'Skeleton', lvl: 5, hp: 100, seq: 5 }), monster2.sk)
   feedS.append(enc({ action: 'Fear Lv1', seq: 6 }), monster2.sk)
-  feedA.append(enc({ action: 'Attack', seq: 7, ref: b2h(feedS.last.sig) }), monster2.sk)
+  feedA.append(enc({ action: 'Attack', seq: 7, ref: toHex(feedS.last.sig) }), monster2.sk)
   feedA.append(enc({ action: 'Run Away', seq: 4 }), hero.sk)
   feedC.append(enc({ action: 'Celebrate', seq: 8 }), monster2.sk)
 
@@ -407,15 +407,15 @@ test('Dot graph should be customizable', async t => {
       const d = JSON.parse(b2s(block.body))
       if (d.name) {
         return bq`
-          ${authors[b2h(block.key, 3)]}${d.seq}
+          ${authors[toHex(block.key, 3)]}${d.seq}
           ${d.name}
           LVL${d.lvl}
           HP${d.hp}
         `
       }
-      if (d.ref) builder.link(h2b(d.ref))
+      if (d.ref) builder.link(fromHex(d.ref))
       return bq`
-        ${authors[b2h(block.key, 3)]}${d.seq}
+        ${authors[toHex(block.key, 3)]}${d.seq}
         action:
         ${d.action}
       `

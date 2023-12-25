@@ -1,4 +1,4 @@
-import { b2h, toU8 } from 'picofeed'
+import { toHex, toU8 } from 'picofeed'
 const C_BG = '#2f383e' // graphite
 const C_BG2 = '#2c323d' // slate
 const C_FG = '#bbbba9' // cream
@@ -19,7 +19,7 @@ export async function inspect (repo, opts = {}) {
 
   const colors = opts.colors || {}
   const makeBlockLabel = opts.blockLabel || (block => {
-    const body = b2h(block.body, 8)
+    const body = toHex(block.body, 8)
     const id = hx8(block.sig)
     const author = hx8(block.key)
     return `ID: ${id}\nKEY: ${author}\nBDY: ${body}`
@@ -154,7 +154,7 @@ export async function inspect (repo, opts = {}) {
   return graph
 
   function hx8 (buf) {
-    return b2h(buf.subarray(0, 4))
+    return toHex(buf.subarray(0, 4))
   }
 }
 

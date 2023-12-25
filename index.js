@@ -12,10 +12,9 @@ import {
   Block,
   feedFrom,
   toU8,
-  u8n,
   cpy,
   cmp,
-  b2h,
+  toHex,
   usize
 } from 'picofeed'
 const REPO_SYMBOL = Symbol.for('PicoRepo')
@@ -38,7 +37,7 @@ const CHAIN_HEAD = 6 // Feed end tag inverse index of CHAIN_TAIL
 function mkKey (type, key) {
   key = toU8(key)
   // if (!isBuffer(key)) throw new Error('Expected key to be a Buffer')
-  const buffer = u8n(1 + key.length)
+  const buffer = new Uint8Array(1 + key.length)
   cpy(buffer, key, 1)
   buffer[0] = type
   return buffer
@@ -108,7 +107,7 @@ export class Repo {
   async writeBlock (block) {
     const key = mkKey(BLOCK, block.sig)
     // TODO: this method used to return false when block exists
-    const buffer = u8n(32 + block.blockSize)
+    const buffer = new Uint8Array(32 + block.blockSize)
 
     cpy(buffer, block.key)
     cpy(buffer, block.buffer, 32)
@@ -395,7 +394,7 @@ export class Repo {
     const latest = {}
     for (let i = evicted.length - 1; i >= 0; i--) {
       const block = evicted.block(i)
-      const key = b2h(block.key)
+      const key = toHex(block.key)
       if (!latest[key]) latest[key] = await this._getLatestPtr(block.key)
       // detect if latest-ptr needs to be adjusted
       if (latest[key]?.equals(block.sig)) {
@@ -596,7 +595,7 @@ export class Repo {
 
 /** @type {(n: number, char: number|undefined) => Uint8Array} */
 function u8fill (n, char) {
-  const b = u8n(n)
+  const b = new Uint8Array(n)
   if (typeof char !== 'undefined') for (let i = 0; i < b.length; i++) b[i] = char
   return b
 }
