@@ -107,10 +107,10 @@ export class Repo {
   async writeBlock (block) {
     const key = mkKey(BLOCK, block.sig)
     // TODO: this method used to return false when block exists
-    const buffer = new Uint8Array(32 + block.blockSize)
+    const buffer = new Uint8Array(block.blockSize)
 
-    cpy(buffer, block.key)
-    cpy(buffer, block.buffer, 32)
+    if (!block.key) throw new Error('AnonymousBlocks not supported')
+    cpy(buffer, block.buffer, 0)
 
     const batch = []
     batch.push({ type: 'put', key, value: buffer })
@@ -143,8 +143,7 @@ export class Repo {
         if (!err.notFound) throw err
       })
     if (buffer) {
-      const b = new Block(buffer, 32)
-      b._pk = buffer.subarray(0, 32) // Don't re-verify previously stored blocks
+      const b = new Block(buffer)
       return b
     }
   }
