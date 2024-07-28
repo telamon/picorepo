@@ -29,14 +29,14 @@
   },
   "homepage": "https://github.com/telamon/picorepo",
   "peerDependencies": {
-    "picofeed": "^8.0.2"
+    "picofeed": "^8.0.3"
   },
   "devDependencies": {
     "abstract-level": "^2.0.0",
     "brittle": "^3.3.2",
     "c8": "^10.1.2",
     "memory-level": "^1.0.0",
-    "picofeed": "^8.0.2",
+    "picofeed": "^8.0.3",
     "standard": "^17.1.0"
   }
 }

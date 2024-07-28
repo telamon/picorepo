@@ -373,20 +373,20 @@ export class Repo {
    * If allowDetached is true this method expects CHAIN pointers
    * instead of AUTHOR/HEAD pointers.
    * @param {PublicKey|SignatureBin} head Block Signature or Author's PublicKey
-   * @param {SignatureBin} ptr Stop at block signature
+   * @param {SignatureBin?} stopAt Stop at block signature
    * @return {Promise<Feed?>} A feed containing all blocks that were evicted or null if nothing was removed
    */
-  async rollback (head, ptr) {
+  async rollback (head, stopAt = undefined) {
     let stopHit = false
     const loader = !this.allowDetached ? this.loadHead : this.resolveFeed
 
     const evicted = await loader.bind(this)(head, (block, abort) => {
-      if (ptr && cmp(block.sig, ptr)) {
+      if (stopAt && cmp(block.sig, stopAt)) {
         stopHit = true
         abort()
       }
     })
-    if (ptr && !stopHit) throw new Error('ReferenceNotFound')
+    if (stopAt && !stopHit) throw new Error('ReferenceNotFound')
     if (!evicted) return null
 
     const batch = []
@@ -441,7 +441,7 @@ export class Repo {
     if (!this.allowDetached) {
       batch.push({ type: 'del', key: mkKey(HEAD, head) })
       if (!isFeedPurged) { // Partial Rollback, part of feed still exists
-        batch.push({ type: 'put', key: mkKey(HEAD, head), value: ptr })
+        batch.push({ type: 'put', key: mkKey(HEAD, head), value: stopAt })
       }
     } else { // remove dangling AuthorHeads
       const k = evicted.first.key
