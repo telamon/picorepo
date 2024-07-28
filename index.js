@@ -127,6 +127,7 @@ export class Repo {
       batch.push({ type: 'put', key: mkKey(CHAIN_TAIL, block.sig), value: chainId })
       batch.push({ type: 'put', key: mkKey(CHAIN_HEAD, chainId), value: block.sig })
     }
+    // @ts-ignore
     await this._db.batch(batch)
     return true
   }
@@ -474,7 +475,7 @@ export class Repo {
     for (const key of relocate) {
       batch.push({ type: 'del', key: mkKey(LATEST, key) })
     }
-
+    // @ts-ignore
     await this._db.batch(batch)
     return evicted
   }
@@ -571,23 +572,12 @@ export class Repo {
     const iter = this._db.iterator(query)
     const result = []
     while (true) {
-      try {
-        const [key, value] = await new Promise((resolve, reject) => {
-          iter.next((err, key, value) => {
-            if (err) reject(err)
-            else resolve([key, value])
-          })
-        })
-        if (!key) break
-        result.push({ key: key.slice(1), value })
-      } catch (err) {
-        console.warn('Iterator died with an error', err)
-        break
-      }
+      const res = await iter.next()
+      if (!res?.length) break
+      const [key, value] = res
+      result.push({ key: key.slice(1), value })
     }
-    await new Promise((resolve, reject) => {
-      iter.close(err => err ? reject(err) : resolve(true))
-    })
+    await iter.close()
     return result
   }
 }
