@@ -1,6 +1,6 @@
 {
   "name": "picorepo",
-  "version": "2.2.4",
+  "version": "2.2.5",
   "description": "Persistent efficient binary block storage for picofeeds",
   "files": [
     "index.js",
