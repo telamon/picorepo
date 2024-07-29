@@ -5,6 +5,7 @@ import { Feed, cmp, toHex, fromHex, getPublicKey, b2s } from 'picofeed'
 import { MemoryLevel } from 'memory-level'
 import { Repo } from './index.js'
 if (!globalThis.crypto) globalThis.crypto = webcrypto // shim for test.js and node processes
+Feed.__vctr = 0 // enable counter
 // const { dump } = require('./dot')
 const DB = () => new MemoryLevel({
   keyEncoding: 'buffer',
@@ -423,6 +424,10 @@ test('Dot graph should be customizable', async t => {
   })
   t.ok(dot)
   // require('fs').writeFileSync('test.dot', dot)
+})
+
+test('test suite verifcation counts', async () => {
+  console.log('block.verify() was invoked n-times:', Feed.__vctr)
 })
 
 // nice this is a useful hack for multiline strings

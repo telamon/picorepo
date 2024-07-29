@@ -8,7 +8,6 @@
  * During Feed 4.x upgrade I realize this is due for a rewrite
  */
 import {
-  Feed,
   Block,
   feedFrom,
   toU8,
@@ -19,6 +18,7 @@ import {
 } from 'picofeed'
 const REPO_SYMBOL = Symbol.for('PicoRepo')
 /** @typedef {(block: Block, self: Repo) => boolean|Promise<boolean>} MergeStrategy */
+/** @typedef {import('picofeed').Feed} Feed */
 /** @typedef {import('picofeed').SignatureBin} SignatureBin */
 /** @typedef {import('picofeed').PublicKey} PublicKey */
 /** @typedef {import('abstract-level').AbstractLevel<any,Uint8Array,Uint8Array>} BinaryLevel */
@@ -209,7 +209,7 @@ export class Repo {
    * @returns {Promise<number>} Blocks written
    */
   async merge (feed, strategy) { // or merge() ?
-    if (!Feed.isFeed(feed)) feed = feedFrom(feed)
+    feed = feedFrom(feed)
     if (!feed.length) return 0
     let blocksWritten = 0
     let owner = null
@@ -352,7 +352,7 @@ export class Repo {
       if (abortAfter || abort) break
     }
     // Reconstruct feed from blocks
-    const feed = feedFrom(pending)
+    const feed = feedFrom(pending, true) // No Verify
     if (feed.length) return feed
   }
 

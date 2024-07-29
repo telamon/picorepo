@@ -14,8 +14,8 @@
     "test": "brittle test.js",
     "cov": "c8 --check-coverage --lines=100 node test.js",
     "debug": "node inspect $(npm bin)/brittle test.js",
-    "types": "tsc --emitDeclarationOnly --allowJs --skipLibCheck --checkJs --declaration --removeComments --lib es2022 --target es2022 --moduleResolution nodenext --module nodenext index.js",
-    "prepublishOnly": "standard && npm test"
+    "types": "(rm -rf *.ts || true) && tsc --emitDeclarationOnly --allowJs --skipLibCheck --checkJs --declaration --removeComments --lib es2022 --target es2022 --moduleResolution nodenext --module nodenext index.js",
+    "prepublishOnly": "standard && npm test && npm run types"
   },
   "types": "index.d.ts",
   "repository": {
@@ -29,14 +29,14 @@
   },
   "homepage": "https://github.com/telamon/picorepo",
   "peerDependencies": {
-    "picofeed": "^8.0.3"
+    "picofeed": "^8.0.4"
   },
   "devDependencies": {
     "abstract-level": "^2.0.0",
     "brittle": "^3.3.2",
     "c8": "^10.1.2",
     "memory-level": "^1.0.0",
-    "picofeed": "^8.0.3",
+    "picofeed": "^8.0.4",
     "standard": "^17.1.0"
   }
 }
