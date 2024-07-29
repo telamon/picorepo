@@ -21,6 +21,7 @@ const REPO_SYMBOL = Symbol.for('PicoRepo')
 /** @typedef {(block: Block, self: Repo) => boolean|Promise<boolean>} MergeStrategy */
 /** @typedef {import('picofeed').SignatureBin} SignatureBin */
 /** @typedef {import('picofeed').PublicKey} PublicKey */
+/** @typedef {import('abstract-level').AbstractLevel<any,Uint8Array,Uint8Array>} BinaryLevel */
 // Namespaces
 const HEAD = 0 // Feed end tag by Author PK
 const BLOCK = 1 // Block contents
@@ -48,8 +49,7 @@ export class Repo {
   static isRepo (o) { return o && o[REPO_SYMBOL] }
 
   /**
-   *
-   * @param {import('abstract-level').AbstractLevel<Uint8Array,Uint8Array,Uint8Array>} db Abstract Leveldown adapter
+   * @param {BinaryLevel} db Abstract Leveldown adapter
    * @param {MergeStrategy|Array<MergeStrategy>} strategy
    */
   constructor (db, strategy = []) {
